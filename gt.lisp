@@ -41,3 +41,6 @@
 
 ;;; TODO: :@ from fset but include the serapeum functionality.
 ;;; TODO: Define MAPCONCAT over fset sequences
+;;; TODO: Generic-cl less its new seq.
+;;; TODO: Filesystem from UIOP.
+;;; TODO: Process management from UIOP.
