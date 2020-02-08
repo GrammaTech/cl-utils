@@ -13,3 +13,5 @@
     :licence "MIT"
     :description "Test the GT package."
     :perform (test-op (o c) (symbol-call :gt/test '#:test)))
+
+(register-system-packages "misc-extensions" '(:gmap))

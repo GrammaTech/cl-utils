@@ -1,7 +1,7 @@
 (uiop/package:define-package :gt
     (:nicknames :gt/gt)
   (:use-reexport :common-lisp :alexandria :serapeum :closer-mop
-                 :trivia :iterate :fset :split-sequence :cl-ppcre
+                 :trivia :iterate :fset :gmap :split-sequence :cl-ppcre
                  :named-readtables :curry-compose-reader-macros)
   (:shadow :~> :~~>)                    ; Shadow serapeum arrows.
   (:shadowing-import-from :common-lisp
