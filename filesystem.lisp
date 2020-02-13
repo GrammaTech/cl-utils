@@ -215,7 +215,7 @@ may lose the original working directory."
 (defmacro with-temporary-file-of ((variable &optional type) payload &rest body)
   "Execute BODY with PAYLOAD in a temporary file whose path is in VARIABLE."
   (once-only (payload)
-    `(let ((,variable (temp-file-name ,type)))
+    `(let ((,variable (get-temporary-file :type ,type)))
        (unwind-protect (progn (typecase ,payload
                                 (string (string-to-file ,payload ,variable))
                                 (vector (bytes-to-file ,payload ,variable)))
