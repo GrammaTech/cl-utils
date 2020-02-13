@@ -40,6 +40,7 @@
                           :concat :range :partition :filter)
   (:shadowing-import-from :cl-ppcre
                           :scan))       ; Shadow serapeum:scan.
+;;; NOTE: *Consider* including Generic-cl less its new seq. stuff.
 (in-package :gt)
 
 ;;; A poor approximation of `serapium:@'.
@@ -126,7 +127,3 @@ An extension of `serapeum:mapconct' to include fset collections.")
 (defun parse-numbers (string &key (radix 10) (delim #\Space))
   (mapcar #'(lambda (num) (parse-integer num :radix radix))
           (split-sequence delim string :remove-empty-subseqs t)))
-
-;;; NOTE: *Consider* including Generic-cl less its new seq. stuff.
-;;; TODO: Filesystem from UIOP.
-;;; TODO: Process management from UIOP.
