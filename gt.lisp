@@ -38,6 +38,7 @@
                           :concat :range :partition :filter)
   (:shadowing-import-from :cl-ppcre
                           :scan))       ; Shadow serapeum:scan.
+(in-package :gt)
 
 ;;; A poor approximation of `serapium:@'.
 (defmethod lookup ((table hash-table) key)
