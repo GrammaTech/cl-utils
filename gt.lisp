@@ -6,6 +6,7 @@
                  :functional-trees
                  :named-readtables :curry-compose-reader-macros)
   (:shadow :mapconcat :~> :~~>)  ; Shadow serapeum arrows & mapconcat.
+  (:shadow :lines)                      ; We wrap in a defgeneric.
   (:shadowing-import-from :common-lisp
                           :map)         ; Shadow fset:map.
   (:shadowing-import-from :serapeum
@@ -128,3 +129,9 @@ An extension of `serapeum:mapconct' to include fset collections.")
 (defun parse-numbers (string &key (radix 10) (delim #\Space))
   (mapcar #'(lambda (num) (parse-integer num :radix radix))
           (split-sequence delim string :remove-empty-subseqs t)))
+
+
+;;; Some functions become generic functions for extensibility.
+(defgeneric lines (thing)
+  (:documentation "A list of lines in THING.")
+  (:method ((string string)) (serapeum:lines string)))
