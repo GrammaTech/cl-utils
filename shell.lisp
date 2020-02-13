@@ -10,10 +10,11 @@
 ;;; shell commands and common lisp streams (in some cases flowing from
 ;;; or into files on disk).
 (uiop/package:define-package :gt/shell
-    (:use :common-lisp :alexandria :iterate :gt/misc :arrow-macros
-          :cl-ppcre :split-sequence)
+    (:use-reexport :uiop/launch-program)
+  (:use :common-lisp :alexandria :iterate :gt/misc :arrow-macros
+        :cl-ppcre :split-sequence)
   (:import-from :uiop/run-program :run-program)
-  (:import-from :uiop/os :getenv)
+  (:import-from :uiop/os :getenv :os-unix-p)
   (:export :*shell-debug*
            :*shell-error-codes*
            :*shell-non-error-codes*
@@ -29,6 +30,8 @@
            :escape-string
            :unescape-string
            :which
+           :getenv
+           :os-unix-p
            #+windows :ensure-slash
            #+windows :convert-backslash-to-slash))
 (in-package :gt/shell)
@@ -174,10 +177,10 @@ ARGS (including keyword arguments) are passed through to `uiop:launch-program'."
   (assert (member io '(:input :output)) (io)
           "first argument ~a to `io-shell' is not one of :INPUT or :OUTPUT" io)
   (let ((proc-sym (gensym)))
-    `(let* ((,proc-sym (uiop:launch-program ,shell ,@args
-                                            ,io :stream
-                                            :wait nil
-                                            :element-type '(unsigned-byte 8))))
+    `(let* ((,proc-sym (launch-program ,shell ,@args
+                                       ,io :stream
+                                       :wait nil
+                                       :element-type '(unsigned-byte 8))))
        (with-open-stream
            (,stream-var (make-flexi-stream
                          ,(ecase io

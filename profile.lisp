@@ -6,7 +6,8 @@
 ;;; @url{http://oprofile.sourceforge.net/news/}).
 (uiop/package:define-package :gt/profile
     (:use :common-lisp :alexandria :iterate :gt/misc :arrow-macros
-          :cl-ppcre :split-sequence)
+          :cl-ppcre :split-sequence
+          :named-readtables :curry-compose-reader-macros)
   (:import-from :cl-dot)
   (:import-from :uiop/run-program :run-program)
   (:import-from :uiop/os :getenv)
@@ -16,6 +17,7 @@
            :*profile-flame-graph*
            :with-prof))
 (in-package :gt/profile)
+(in-readtable :curry-compose-reader-macros)
 
 ;; Dot implementation from
 ;; https://techfak.uni-bielefeld.de/~jmoringe/call-graph.html.
@@ -136,12 +138,12 @@ to a file at PROFILE-PATH.  Currently only works in SBCL."
                                                   :mode :cpu
                                                   :loop nil)
          ,@body
-         (if sel/utility:*profile-flame-graph*
+         (if gt/profile:*profile-flame-graph*
              (with-open-file (out ,profile-path
                                   :if-exists :supersede
                                   :if-does-not-exist :create
                                   :direction :output)
-               (sel/utility:profile-to-flame-graph out))
+               (gt/profile:profile-to-flame-graph out))
              (with-output-to-file (out ,profile-path
                                        :if-exists :overwrite
                                        :if-does-not-exist :create)

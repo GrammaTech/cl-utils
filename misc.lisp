@@ -45,6 +45,7 @@
            :random-sample-with-replacement
            :random-sample-without-replacement
            :apply-replacements
+           :mapcar-improper-list
            :replace-all
            :aget
            :areplace
