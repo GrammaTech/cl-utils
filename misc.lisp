@@ -6,7 +6,8 @@
           :iterate
           :named-readtables
           :curry-compose-reader-macros)
-  (:import-from :SB-INTROSPECT :FUNCTION-LAMBDA-LIST)
+  (:import-from :serapeum :mapconcat)
+  (:import-from :sb-introspect :function-lambda-list)
   (:shadowing-import-from
    :closer-mop
    :standard-method :standard-class :standard-generic-function
