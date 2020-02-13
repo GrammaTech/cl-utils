@@ -4,7 +4,7 @@
 ;;; functions for efficient serialization to/from files as well as
 ;;; functions for creating and using temporary files and directories.
 ;;;
-(defpackage :gt/file-system
+(defpackage :gt/filesystem
   (:use :common-lisp :alexandria :serapeum :iterate)
   (:shadowing-import-from :iterate
                           ;; Shadow serapeum macros.
@@ -49,7 +49,7 @@
    :directory-wildcard
    :list-directory
    :walk-directory))
-(in-package :gt/file-system)
+(in-package :gt/filesystem)
 
 (defun file-mime-type (path)
   "Return the mime type of PATH as a list of two symbols.

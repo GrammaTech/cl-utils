@@ -98,6 +98,33 @@ An extension of `serapeum:mapconct' to include fset collections.")
 (defmethod print-object ((obj (eql infinity)) stream)
   (if *print-readably* (call-next-method) (format stream "positive-infinity")))
 
+(define-condition parse-number (error)
+  ((text :initarg :text :initform nil :reader text))
+  (:report (lambda (condition stream)
+             (format stream "Can't parse ~a as a number" (text condition)))))
+
+(defun parse-number (string)
+  "Parse the number located at the front of STRING or return an error."
+  (let ((number-str
+         (or (multiple-value-bind (whole matches)
+                 (scan-to-strings
+                  "^(-?.?[0-9]+(/[-e0-9]+|\\.[-e0-9]+)?)([^\\./A-Xa-x_-]$|$)"
+                  string)
+               (declare (ignorable whole))
+               (when matches (aref matches 0)))
+             (multiple-value-bind (whole matches)
+                 (scan-to-strings "0([xX][0-9A-Fa-f]+)([^./]|$)"
+                                  string)
+               (declare (ignorable whole))
+               (when matches (concatenate 'string "#" (aref matches 0)))))))
+    (unless number-str
+      (make-condition 'parse-number :text string))
+    (read-from-string number-str)))
+
+(defun parse-numbers (string &key (radix 10) (delim #\Space))
+  (mapcar #'(lambda (num) (parse-integer num :radix radix))
+          (split-sequence delim string :remove-empty-subseqs t)))
+
 ;;; NOTE: *Consider* including Generic-cl less its new seq. stuff.
 ;;; TODO: Filesystem from UIOP.
 ;;; TODO: Process management from UIOP.

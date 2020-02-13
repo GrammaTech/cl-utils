@@ -1,6 +1,75 @@
-
-
 ;;;; generic forensic functions over arbitrary objects
+(uiop/package:define-package :gt/misc
+    (:use :common-lisp :alexandria
+          :metabang-bind
+          :closer-mop
+          :iterate
+          :named-readtables
+          :curry-compose-reader-macros)
+  (:import-from :SB-INTROSPECT :FUNCTION-LAMBDA-LIST)
+  (:shadowing-import-from
+   :closer-mop
+   :standard-method :standard-class :standard-generic-function
+   :defmethod :defgeneric)
+  (:export :arglist
+           :show-it
+           :equal-it
+           :count-cons
+           :tree-right-length
+           :tree-right-walk
+           ;; simple utility
+           :*uninteresting-conditions*
+           :with-quiet-compilation
+           :if-let*
+           :repeatedly
+           :indexed
+           :different-it
+           :mapt
+           :plist-get
+           :plist-drop-if
+           :plist-drop
+           :plist-merge
+           :counts
+           :proportional-pick
+           :position-extremum
+           :position-extremum-rand
+           :random-bool
+           :random-elt-with-decay
+           :random-hash-table-key
+           :uniform-probability
+           :normalize-probabilities
+           :cumulative-distribution
+           :un-cumulative-distribution
+           :random-pick
+           :random-subseq
+           :random-sample-with-replacement
+           :random-sample-without-replacement
+           :apply-replacements
+           :replace-all
+           :aget
+           :areplace
+           :adrop
+           :alist-filter
+           :getter
+           :transpose
+           :interleave
+           :drop-until
+           :take-until
+           :pad
+           :chunks
+           :cartesian
+           :cartesian-without-duplicates
+           :binary-search
+           :tails
+           :pairs
+           :filter-subtrees
+           :make-thread-safe-hash-table
+           ;; symbols
+           :symbol-cat
+           :symbol-cat-in-package))
+(in-package :gt/misc)
+(in-readtable :curry-compose-reader-macros)
+
 (defun arglist (fname)
   "Return the argument list of FNAME."
   ;; Taken from swank/backend:arglist.
@@ -20,46 +89,6 @@
         :not-available))
   #-(or ecl sbcl ccl)
   (error "Only ECL, SBCL, and CCL."))
-
-(defun show-it (hd &optional out)
-  "Print the fields of a elf, section or program header.
-Optional argument OUT specifies an output stream."
-  (format (or out t) "~&")
-  (mapcar
-   (lambda (slot)
-     (let ((val (slot-value hd slot)))
-       (format (or out t) "~s:~a " slot val)
-       (list slot val)))
-   (mapcar #'slot-definition-name (class-slots (class-of hd)))))
-
-(defun equal-it (obj1 obj2 &optional trace inhibit-slots)
-  "Equal over objects and lists."
-  (let ((trace1 (concatenate 'list (list obj1 obj2) trace)))
-    (cond
-      ((or (member obj1 trace) (member obj2 trace)) t)
-      ((and (listp obj1) (not (listp (cdr obj1)))
-            (listp obj2) (not (listp (cdr obj2))))
-       (and (equal-it (car obj1) (car obj2))
-            (equal-it (cdr obj1) (cdr obj2))))
-      ((or (and (listp obj1) (listp obj2)) (and (vectorp obj1) (vectorp obj2)))
-       (and (equal (length obj1) (length obj2))
-            (reduce (lambda (acc pair)
-                      (and acc (equal-it (car pair) (cdr pair) trace1)))
-                    (if (vectorp obj1)
-                        (mapcar #'cons (coerce obj1 'list) (coerce obj2 'list))
-                        (mapcar #'cons obj1 obj2))
-                    :initial-value t)))
-      ((class-slots (class-of obj1))
-       (reduce
-        (lambda (acc slot)
-          (and acc (equal-it (slot-value obj1 slot) (slot-value obj2 slot)
-                             trace1)))
-        (remove-if [{member _ inhibit-slots :test #'string= :key #'symbol-name}
-                    #'symbol-name]
-                   (mapcar #'slot-definition-name
-                           (class-slots (class-of obj1))))
-        :initial-value t))
-      (t (equal obj1 obj2)))))
 
 (defvar *uninteresting-conditions* nil
   "Additional uninteresting conditions for `with-quiet-compilation' to stifle.")
@@ -200,12 +229,6 @@ is executed."
        (last (return element))
        ((funcall test item element) (setf last t)))))
 
-(defun plist-keys (plist)
-  (declare (optimize (speed 3) (safety 0) (debug 0)))
-  (iter (for (key value) on plist by #'cddr)
-        (declare (ignorable value))
-        (collect key)))
-
 (defun plist-drop-if (predicate list &aux last)
   (nreverse (reduce (lambda (acc element)
                       (cond
@@ -250,15 +273,6 @@ Keyword argument FRAC will return fractions instead of raw counts."
   (let ((scores (mapcar key list)))
     (random-elt (mapcar #'car (remove-if-not [{= (apply #'max scores)} #'second]
                                              (indexed scores))))))
-
-(defun partition (test list)
-  "Return a list of lists of elements of LIST which do and do not satisfy TEST.
-The first list holds elements of LIST which satisfy TEST, the second
-holds those which do not."
-  (loop :for x :in list
-     :if (funcall test x) :collect x :into yes
-     :else :collect x :into no
-     :finally (return (list yes no))))
 
 (defun random-bool (&optional bias)
   (> (or bias 0.5) (random 1.0)))
@@ -473,31 +487,8 @@ occurences of the part is replaced with replacement."))
     (list (reverse (cons (car list) rest)))
     (t nil)))
 
-(defun mapconcat (func list sep)
-  (apply #'concatenate 'string (interleave (mapcar func list) sep)))
-
-(defun drop (n seq)
-  "Return SEQ less the first N items."
-  (if (> n (length seq))
-      nil
-      (subseq seq (min n (length seq)))))
-
-(defun drop-while (pred seq)
-  (if (and (not (null seq)) (funcall pred (car seq)))
-      (drop-while pred (cdr seq))
-      seq))
-
 (defun drop-until (pred seq)
   (drop-while (complement pred) seq))
-
-(defun take (n seq)
-  "Return the first N items of SEQ."
-  (subseq seq 0 (min n (length seq))))
-
-(defun take-while (pred seq)
-  (if (and (not (null seq)) (funcall pred (car seq)))
-      (cons (car seq) (take-while pred (cdr seq)))
-      '()))
 
 (defun take-until (pred seq)
   (take-while (complement pred) seq))

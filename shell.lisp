@@ -9,8 +9,30 @@
 ;;; `read-shell-file' and `xz-pipe' functions provide for running
 ;;; shell commands and common lisp streams (in some cases flowing from
 ;;; or into files on disk).
-;;;
-;;;@texi{shell}
+(uiop/package:define-package :gt/shell
+    (:use :common-lisp :alexandria :iterate :gt/misc :arrow-macros
+          :cl-ppcre :split-sequence)
+  (:import-from :uiop/run-program :run-program)
+  (:import-from :uiop/os :getenv)
+  (:export :*shell-debug*
+           :*shell-error-codes*
+           :*shell-non-error-codes*
+           :shell-command-failed
+           :shell
+           :write-shell
+           :read-shell
+           :write-shell-file
+           :read-shell-file
+           :xz-pipe
+           :escape-chars
+           :split-quoted
+           :escape-string
+           :unescape-string
+           :which
+           #+windows :ensure-slash
+           #+windows :convert-backslash-to-slash))
+(in-package :gt/shell)
+
 (defvar *shell-debug* nil
   "Set to true to print shell invocations.  If a list, print
 shell cmd if :CMD is a membe, input if :INPUT is a member, and
@@ -188,81 +210,6 @@ ARGS (including keyword arguments) are passed through to `uiop:launch-program'"
   `(read-shell-file (,in-stream ,in-file "unxz")
      (write-shell-file (,out-stream ,out-file "xz")
        ,@body)))
-
-(define-condition parse-number (error)
-  ((text :initarg :text :initform nil :reader text))
-  (:report (lambda (condition stream)
-             (format stream "Can't parse ~a as a number" (text condition)))))
-
-(defun parse-number (string)
-  "Parse the number located at the front of STRING or return an error."
-  (let ((number-str
-         (or (multiple-value-bind (whole matches)
-                 (scan-to-strings
-                  "^(-?.?[0-9]+(/[-e0-9]+|\\.[-e0-9]+)?)([^\\./A-Xa-x_-]$|$)"
-                  string)
-               (declare (ignorable whole))
-               (when matches (aref matches 0)))
-             (multiple-value-bind (whole matches)
-                 (scan-to-strings "0([xX][0-9A-Fa-f]+)([^./]|$)"
-                                  string)
-               (declare (ignorable whole))
-               (when matches (concatenate 'string "#" (aref matches 0)))))))
-    (unless number-str
-      (make-condition 'parse-number :text string))
-    (read-from-string number-str)))
-
-(defun parse-numbers (string &key (radix 10) (delim #\Space))
-  (mapcar #'(lambda (num) (parse-integer num :radix radix))
-          (split-sequence delim string :remove-empty-subseqs t)))
-
-;;; This duplicates the function hu.dwim.utils:string-trim-whitespace
-
-(define-constant +whitespace-chars+
-    (remove-duplicates
-     (loop for s in '("Space" "Tab" "Newline" "Return"
-                      "Linefeed" "Page")
-        when (name-char s)
-        collect it))
-  :test #'equal)
-
-(defun whitespacep (c)
-  (find c +whitespace-chars+))
-
-(defun trim-whitespace (str)
-  (string-trim +whitespace-chars+ str))
-
-(defun trim-right-whitespace (str)
-  (string-right-trim +whitespace-chars+ str))
-
-(defun trim-left-whitespace (str)
-  (string-left-trim +whitespace-chars+ str))
-
-(defun normalize-whitespace (str)
-  "Trims leading and trailing whitespace, and reduces all remaining
-sequences of one or more whitespace characters to a single space"
-  (flet ((%whitespacep (c) (member c +whitespace-chars+)))
-    (let ((str (trim-whitespace str))
-          (element-type (array-element-type str)))
-      (let* ((len (length str)))
-        (if (= len 0)
-            (make-array '(0) :element-type element-type)
-            (let ((result (make-array (list len)
-                                      :element-type element-type
-                                      :initial-element #\Space))
-                  (out 0)
-                  (w-start nil))
-              (loop for cursor from 0 below len
-                 do (let ((c (aref str cursor)))
-                      (if (%whitespacep c)
-                          (unless w-start
-                            (psetf (aref result out) #\Space
-                                   out (1+ out)
-                                   w-start cursor))
-                          (setf (aref result out) c
-                                out (1+ out)
-                                w-start nil))))
-              (subseq result 0 out)))))))
 
 (defun escape-chars (chars str)
   "Returns a fresh string that is the same as str, except that
