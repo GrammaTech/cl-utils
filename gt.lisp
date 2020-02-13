@@ -41,7 +41,13 @@
                           ;; Shadowed sequence operations from serapeum.
                           :concat :range :partition :filter)
   (:shadowing-import-from :cl-ppcre
-                          :scan))       ; Shadow serapeum:scan.
+                          :scan)        ; Shadow serapeum:scan.
+  (:export :mapconcat
+           :negative-infinity
+           :positive-infinity
+           :infinity
+           :parse-number
+           :parse-numbers))
 ;;; NOTE: *Consider* including Generic-cl less its new seq. stuff.
 (in-package :gt)
 
