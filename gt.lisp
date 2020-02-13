@@ -3,7 +3,7 @@
   (:use-reexport :common-lisp :alexandria :serapeum :closer-mop
                  :trivia :iterate :fset :gmap :split-sequence :cl-ppcre
                  :named-readtables :curry-compose-reader-macros)
-  (:shadow :~> :~~>)                    ; Shadow serapeum arrows.
+  (:shadow :mapconcat :~> :~~>)  ; Shadow serapeum arrows & mapconcat.
   (:shadowing-import-from :common-lisp
                           :map)         ; Shadow fset:map.
   (:shadowing-import-from :serapeum
@@ -39,8 +39,26 @@
   (:shadowing-import-from :cl-ppcre
                           :scan))       ; Shadow serapeum:scan.
 
-;;; TODO: :@ from fset but include the serapeum functionality.
-;;; TODO: Define MAPCONCAT over fset sequences
-;;; TODO: Generic-cl less its new seq.
+;;; A poor approximation of `serapium:@'.
+(defmethod lookup ((table hash-table) key)
+  (gethash key table))
+
+(defgeneric mapconcat (function collection separator &key stream)
+  (:documentation "Build a string by mapping FUNCTION over COLLECTION.
+Separate each value with SEPARATOR.
+An extension of `serapeum:mapconct' to include fset collections.")
+  (:method (function (sequence sequence) separator &key stream)
+    (serapeum:mapconcat function sequence separator :stream stream))
+  (:method (function (seq seq) separator &key stream)
+    (let ((function (coerce function 'function))
+          (i 0)
+          (ult (1- (size seq))))
+      (with-string (stream stream)
+        (do-seq (element seq)
+          (write-string (funcall function element) stream)
+          (unless (= (prog1 i (incf i)) ult)
+            (write-string separator stream)))))))
+
+;;; NOTE: *Consider* including Generic-cl less its new seq. stuff.
 ;;; TODO: Filesystem from UIOP.
 ;;; TODO: Process management from UIOP.
