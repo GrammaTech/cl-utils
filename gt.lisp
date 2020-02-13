@@ -2,6 +2,7 @@
     (:nicknames :gt/gt)
   (:use-reexport :common-lisp :alexandria :serapeum :closer-mop
                  :trivia :iterate :fset :gmap :split-sequence :cl-ppcre
+                 :bordeaux-threads
                  :functional-trees
                  :named-readtables :curry-compose-reader-macros)
   (:shadow :mapconcat :~> :~~>)  ; Shadow serapeum arrows & mapconcat.
