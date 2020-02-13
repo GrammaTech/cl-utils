@@ -24,7 +24,7 @@
   (:shadowing-import-from :functional-trees :map-tree)
   (:shadowing-import-from :fset
                           :@
-                          :unionf :appendf :with :removef
+                          :unionf :appendf :with :removef :size
 			  ;; Shadowed type/constructor names.
 			  :set
 			  ;; Shadowed set operations.
