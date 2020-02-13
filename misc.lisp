@@ -6,7 +6,7 @@
           :iterate
           :named-readtables
           :curry-compose-reader-macros)
-  (:import-from :serapeum :mapconcat :drop-while :take-while)
+  (:import-from :serapeum :mapconcat :drop-while :take-while :plist-keys)
   (:import-from :sb-introspect :function-lambda-list)
   (:shadowing-import-from
    :closer-mop
@@ -27,7 +27,6 @@
            :different-it
            :mapt
            :plist-get
-           :plist-keys
            :plist-drop-if
            :plist-drop
            :plist-merge
@@ -231,12 +230,6 @@ is executed."
      (cond
        (last (return element))
        ((funcall test item element) (setf last t)))))
-
-(defun plist-keys (plist)
-  (declare (optimize (speed 3) (safety 0) (debug 0)))
-  (iter (for (key value) on plist by #'cddr)
-        (declare (ignorable value))
-        (collect key)))
 
 (defun plist-drop-if (predicate list &aux last)
   (nreverse (reduce (lambda (acc element)
