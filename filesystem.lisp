@@ -4,7 +4,8 @@
 ;;; functions for efficient serialization to/from files as well as
 ;;; functions for creating and using temporary files and directories.
 ;;;
-(defpackage :gt/filesystem
+(uiop/package:define-package :gt/filesystem
+  (:use-reexport :uiop/filesystem :uiop/pathname)
   (:use :common-lisp :alexandria :serapeum :iterate)
   (:shadowing-import-from :iterate
                           ;; Shadow serapeum macros.
@@ -14,11 +15,7 @@
                 :get-temporary-file
                 :with-temporary-file)
   (:import-from :split-sequence :split-sequence)
-  (:import-from :uiop/filesystem :delete-directory-tree)
-  (:import-from :uiop :ensure-directory-pathname)
   (:import-from :uiop/run-program :run-program)
-  (:import-from :uiop/filesystem :file-exists-p :directory-exists-p)
-  (:import-from :uiop/pathname :directory-pathname-p)
   (:import-from :uiop/os :chdir)
   (:import-from :uiop/stream
                 :detect-encoding
@@ -48,7 +45,10 @@
    :canonical-pathname
    :directory-wildcard
    :list-directory
-   :walk-directory))
+   :walk-directory
+   ;; Other filename/pathname.
+   :file-permissions
+   :pathname-as-directory))
 (in-package :gt/filesystem)
 
 (defun file-mime-type (path)
