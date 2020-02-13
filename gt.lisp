@@ -2,6 +2,7 @@
     (:nicknames :gt/gt)
   (:use-reexport :common-lisp :alexandria :serapeum :closer-mop
                  :trivia :iterate :fset :gmap :split-sequence :cl-ppcre
+                 :functional-trees
                  :named-readtables :curry-compose-reader-macros)
   (:shadow :mapconcat :~> :~~>)  ; Shadow serapeum arrows & mapconcat.
   (:shadowing-import-from :common-lisp
@@ -18,6 +19,7 @@
   (:shadowing-import-from :closer-mop :defmethod
                           :defgeneric :standard-generic-function
                           :slot-definition-name :class-slots)
+  (:shadowing-import-from :functional-trees :map-tree)
   (:shadowing-import-from :fset
                           :@
                           :unionf :appendf :with :removef
