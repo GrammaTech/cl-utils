@@ -71,6 +71,8 @@
 
 ;; FlameGraph implementation from
 ;; http://paste.lisp.org/display/326901.
+;;
+;; NOTE: Related package. https://github.com/40ants/cl-flamegraph
 #+sbcl
 (defun profile-to-flame-graph (stream)
   "Write FlameGraph profile data to STREAM.
