@@ -123,6 +123,7 @@ The Unix `file' command is used, specifically \"file -b --mime-type PATH\"."
 Restarts available to handle cases where FILESPEC is not writable,
 SET-FILE-WRITABLE, and where the appropriate encoding is not used,
 USE-ENCODING. "
+  (setf filespec (truename filespec))
   (labels ((run-write ()
              (ensure-directories-exist filespec)
              (with-open-file (out filespec :direction :output
