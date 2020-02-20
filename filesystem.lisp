@@ -28,6 +28,7 @@
    :string-to-file
    :bytes-to-file
    ;; Temporary files
+   :delete-path
    :*temporary-directory*
    :get-temporary-file
    :with-temporary-file
