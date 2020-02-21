@@ -16,7 +16,7 @@
                 :with-temporary-file)
   (:import-from :split-sequence :split-sequence)
   (:import-from :uiop/run-program :run-program)
-  (:import-from :uiop/os :chdir)
+  (:import-from :uiop/os :chdir :getcwd)
   (:import-from :uiop/stream
                 :detect-encoding
                 :encoding-external-format)
@@ -34,6 +34,7 @@
    :with-temporary-file
    :with-temporary-directory
    :with-temporary-fifo
+   :getcwd
    :with-cwd
    :with-temporary-file-of
    :pathname-relativize
@@ -163,6 +164,13 @@ USE-ENCODING. "
   (with-open-file (out filespec :element-type '(unsigned-byte 8)
                        :direction :output :if-exists if-exists)
     (write-sequence bytes out)))
+
+(defun pathname-relativize (root-path path)
+  "Return PATH relative to ROOT-PATH."
+  (string-replace-all
+   (namestring (canonical-pathname path))
+   (namestring (canonical-pathname (ensure-directory-pathname root-path)))
+   ""))
 
 
 ;;; Temporary files
