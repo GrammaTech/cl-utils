@@ -8,6 +8,7 @@
           :curry-compose-reader-macros)
   (:import-from :serapeum :mapconcat :drop-while :take-while :plist-keys)
   (:import-from :sb-introspect :function-lambda-list)
+  (:import-from :uiop/utility :with-muffled-conditions)
   (:shadowing-import-from
    :closer-mop
    :standard-method :standard-class :standard-generic-function
@@ -20,6 +21,7 @@
            :tree-right-walk
            ;; simple utility
            :*uninteresting-conditions*
+           :with-muffled-conditions
            :with-quiet-compilation
            :if-let*
            :repeatedly
