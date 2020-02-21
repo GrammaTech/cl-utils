@@ -118,14 +118,15 @@ The Unix `file' command is used, specifically \"file -b --mime-type PATH\"."
                      (file-access-operation condition)
                      (file-access-path condition)))))
 
+;;; TODO: Replace with `alexandria:write-string-into-file'?
 (defun string-to-file (string filespec &key
-                                     (if-exists :supersede)
-                                     (external-format :default))
+                                         (if-exists :supersede)
+                                         (external-format :default))
   "Write STRING to FILESPEC.
 Restarts available to handle cases where FILESPEC is not writable,
 SET-FILE-WRITABLE, and where the appropriate encoding is not used,
 USE-ENCODING. "
-  (setf filespec (truename filespec))
+  (setf filespec (if (probe-file filespec) (truename filespec) filespec))
   (labels ((run-write ()
              (ensure-directories-exist filespec)
              (with-open-file (out filespec :direction :output
