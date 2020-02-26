@@ -212,6 +212,7 @@ The first form passed to `with-temporary-fifo' is passed through to
     (setf *default-pathname-defaults* pathname)
     (chdir pathname)))
 
+;;; TODO: Replace with `with-current-directory' from UIOP.
 (defmacro with-cwd ((dir) &rest body)
   "Change the current working directory to dir and execute body.
 WARNING: This function is not thread safe.  Execution in a threaded
