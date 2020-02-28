@@ -232,7 +232,8 @@ The first form passed to `with-temporary-fifo' is passed through to
   "Set to non-nil for a custom temporary directory.")
 
 (defun temp-file-name (&optional type)
-  (let ((base #+clisp
+  (let ((base
+          #+clisp
           (let ((stream (gensym)))
             (eval `(with-open-stream
                        (,stream (ext:mkstemp
@@ -241,24 +242,14 @@ The first form passed to `with-temporary-fifo' is passed through to
                                                   :directory *temp-dir*
                                                   :name "XXXXXX"))
                                      nil)))
-                     (pathname ,stream))))
+                     (namestring (pathname ,stream)))))
           #+(or sbcl ccl ecl)
           (tempnam *temp-dir* nil)
           #+allegro
           (system:make-temp-file-name nil *temp-dir*)
           #-(or sbcl clisp ccl allegro ecl)
           (error "no temporary file backend for this lisp.")))
-    ;; NOTE:  code smell -- two branches of these ifs are dead in SBCL
-    (without-compiler-notes
-        (if type
-            (if (pathnamep base)
-                (namestring (make-pathname :directory (pathname-directory base)
-                                           :name (pathname-name base)
-                                           :type type))
-                (concatenate 'string base "." type))
-            (if (pathname base)
-                (namestring base)
-                base)))))
+    (concatenate 'string base "." (or type ""))))
 
 #+sbcl
 (without-compiler-notes
