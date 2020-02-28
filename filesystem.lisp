@@ -27,8 +27,9 @@
   (:import-from :uiop/os :getcwd)
   (:import-from :uiop/filesystem :with-current-directory)
   (:import-from :uiop/stream
-                :default-temporary-directory
-                :detect-encoding
+                :default-temporary-directory)
+  (:import-from :asdf-encodings
+                :detect-file-encoding
                 :encoding-external-format)
   (:import-from :osicat :file-permissions :pathname-as-directory)
   (:export
@@ -73,7 +74,7 @@ The Unix `file' command is used, specifically \"file -b --mime-type PATH\"."
 
 (defun file-to-string
     (filespec &key (external-format
-                    (encoding-external-format (detect-encoding filespec))))
+                    (encoding-external-format (detect-file-encoding filespec))))
   "Return the contents of FILESPEC as a string."
   #+ccl (declare (ignorable external-format))
   (labels
@@ -252,7 +253,7 @@ The first form passed to `with-temporary-fifo' is passed through to
     (concatenate 'string base "." (or type ""))))
 
 #+sbcl
-(without-compiler-notes
+(locally (declare (sb-ext:muffle-conditions sb-ext:compiler-note))
   (sb-alien:define-alien-routine (#-win32 "tempnam" #+win32 "_tempnam" tempnam)
       sb-alien:c-string
     (dir sb-alien:c-string)

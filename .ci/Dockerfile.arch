@@ -1,0 +1,12 @@
+ARG LISP
+FROM docker.grammatech.com/synthesis/cl:arch
+
+# Use /root/quicklisp/local-projects.
+RUN cp -R /usr/synth/quicklisp /root/quicklisp
+COPY . /root/quicklisp/local-projects/gt
+WORKDIR /root/quicklisp/local-projects/gt
+ENV LISP=$LISP \
+    QUICK_LISP=/root/quicklisp/ \
+    SBCL_HOME=/usr/synth/lib/sbcl \
+    LISP_STACK=32678
+CMD /bin/bash

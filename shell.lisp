@@ -24,7 +24,7 @@
 (uiop/package:define-package :gt/shell
     (:use-reexport :uiop/launch-program)
   (:use :common-lisp :alexandria :iterate :gt/misc :gt/filesystem :arrow-macros
-        :cl-ppcre :split-sequence)
+        :cl-ppcre :flexi-streams :split-sequence)
   (:import-from :uiop/run-program :run-program)
   (:import-from :uiop/os :getenv :os-unix-p)
   (:export :*shell-debug*
