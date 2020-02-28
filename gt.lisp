@@ -30,9 +30,12 @@
   (:shadowing-import-from :iterate
                           ;; Shadow serapeum macros.
                           :summing :collecting :sum :in)
-  (:shadowing-import-from :closer-mop :defmethod
-                          :defgeneric :standard-generic-function
-                          :slot-definition-name :class-slots)
+  (:shadowing-import-from :closer-mop
+                          :standard-method
+                          :standard-class
+                          :standard-generic-function
+                          :defmethod
+                          :defgeneric)
   (:shadowing-import-from :functional-trees :map-tree)
   (:shadowing-import-from :fset
                           :@

@@ -18,7 +18,6 @@
           :named-readtables
           :curry-compose-reader-macros)
   (:import-from :serapeum :mapconcat :drop-while :take-while :plist-keys)
-  (:import-from :sb-introspect :function-lambda-list)
   (:import-from :uiop/utility :with-muffled-conditions)
   (:shadowing-import-from
    :closer-mop
@@ -89,7 +88,7 @@
   "Return the argument list of FNAME."
   ;; Taken from swank/backend:arglist.
   #+sbcl
-  (function-lambda-list fname)
+  (sb-introspect:function-lambda-list fname)
   ;; NOTE: The following is similar, but may return 0 for nil args.
   ;; (sb-kernel:%simple-fun-arglist fname)
   #+ecl
