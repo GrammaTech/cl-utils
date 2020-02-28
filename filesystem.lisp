@@ -22,10 +22,6 @@
   (:shadowing-import-from :iterate
                           ;; Shadow serapeum macros.
                           :summing :collecting :sum :in)
-  (:import-from :uiop/stream
-                :*temporary-directory*
-                :get-temporary-file
-                :with-temporary-file)
   (:import-from :split-sequence :split-sequence)
   (:import-from :uiop/run-program :run-program)
   (:import-from :uiop/os :chdir :getcwd)
@@ -40,15 +36,16 @@
    :string-to-file
    :bytes-to-file
    ;; Temporary files
+   :*temp-dir*
+   :with-temp-file
+   :with-temp-file-of
+   :with-temp-dir
+   :with-temp-dir-of
+   :with-temp-fifo
+   :temp-file-name
    :delete-path
-   :*temporary-directory*
-   :get-temporary-file
-   :with-temporary-file
-   :with-temporary-directory
-   :with-temporary-fifo
    :getcwd
    :with-cwd
-   :with-temporary-file-of
    :pathname-relativize
    :truenamestring
    :in-directory
@@ -187,29 +184,42 @@ USE-ENCODING. "
 
 
 ;;; Temporary files
-(defun delete-path (path)
-  "Delete anything (file or directory) at PATH."
-  (let ((probe (probe-file path)))
-    (when probe
-      (if (equal (directory-namestring probe)
-                 (namestring probe))
-          (delete-directory-tree (ensure-directory-pathname probe)
-           :validate t)
-          (delete-file path)))))
+(defmacro with-temp-file (spec &rest body)
+  "SPEC holds the variable used to reference the file w/optional extension.
+After BODY is executed the temporary file is removed."
+  (with-gensyms (v)
+    `(let* ((,v ,(second spec))
+            (,(car spec) (temp-file-name ,v)))
+       (unwind-protect (progn ,@body) (delete-path ,(car spec))))))
 
-(defmacro with-temporary-directory (spec &rest body)
+(defmacro with-temp-file-of ((variable &optional type) string &rest body)
+  "Execute BODY with STRING in a temporary file whose path is in VARIABLE."
+  `(let ((,variable (temp-file-name ,type)))
+     (unwind-protect (progn (string-to-file ,string ,variable) ,@body)
+       (when (probe-file ,variable) (delete-file ,variable)))))
+
+(defmacro with-temp-dir (spec &rest body)
   "Execute BODY with a temporary directory.
-The first form passed to `with-temporary-directory' is passed through
-to `with-temporary-file' to create path to the temporary fifo."
-  `(with-temporary-file ,spec
+The first form passed to `with-temp-dir' is passed through
+to `with-temp-file' to create path to the temporary directory."
+  `(with-temp-file ,spec
      (ensure-directories-exist (ensure-directory-pathname ,(car spec)))
      ,@body))
 
-(defmacro with-temporary-fifo (spec &rest body)
+(defmacro with-temp-dir-of (spec dir &rest body)
+  "Populate SPEC with the path to a temporary directory with the contents
+of DIR and execute BODY"
+  `(with-temp-dir ,spec
+     (run-program (format nil "cp -pr ~a/. ~a"
+                              (namestring ,dir)
+                              (namestring ,(car spec))))
+     ,@body))
+
+(defmacro with-temp-fifo (spec &rest body)
   "Execute BODY with a temporary fifo.
 The first form passed to `with-temporary-fifo' is passed through to
-`with-temporary-file' to create path to the temporary fifo."
-  `(with-temporary-file ,spec
+`with-temp-file' to create path to the temporary fifo."
+  `(with-temp-file ,spec
      (delete-path ,(car spec))
      #-windows (osicat-posix:mkfifo ,(car spec) (logior osicat-posix:s-iwusr
                                                         osicat-posix:s-irusr))
@@ -236,15 +246,76 @@ may lose the original working directory."
          (progn (cd ,dir) ,@body)
          (cd ,orig)))))
 
-(defmacro with-temporary-file-of ((variable &optional type) payload &rest body)
-  "Execute BODY with PAYLOAD in a temporary file whose path is in VARIABLE."
-  (once-only (payload)
-    `(let ((,variable (get-temporary-file :type ,type)))
-       (unwind-protect (progn (typecase ,payload
-                                (string (string-to-file ,payload ,variable))
-                                (vector (bytes-to-file ,payload ,variable)))
-                              ,@body)
-         (when (probe-file ,variable) (delete-file ,variable))))))
+(defvar *temp-dir* nil
+  "Set to non-nil for a custom temporary directory.")
+
+(defun temp-file-name (&optional type)
+  (let ((base #+clisp
+          (let ((stream (gensym)))
+            (eval `(with-open-stream
+                       (,stream (ext:mkstemp
+                                 (if *temp-dir*
+                                     (namestring (make-pathname
+                                                  :directory *temp-dir*
+                                                  :name "XXXXXX"))
+                                     nil)))
+                     (pathname ,stream))))
+          #+(or sbcl ccl ecl)
+          (tempnam *temp-dir* nil)
+          #+allegro
+          (system:make-temp-file-name nil *temp-dir*)
+          #-(or sbcl clisp ccl allegro ecl)
+          (error "no temporary file backend for this lisp.")))
+    ;; NOTE:  code smell -- two branches of these ifs are dead in SBCL
+    (without-compiler-notes
+        (if type
+            (if (pathnamep base)
+                (namestring (make-pathname :directory (pathname-directory base)
+                                           :name (pathname-name base)
+                                           :type type))
+                (concatenate 'string base "." type))
+            (if (pathname base)
+                (namestring base)
+                base)))))
+
+#+sbcl
+(without-compiler-notes
+  (sb-alien:define-alien-routine (#-win32 "tempnam" #+win32 "_tempnam" tempnam)
+      sb-alien:c-string
+    (dir sb-alien:c-string)
+    (prefix sb-alien:c-string)))
+
+#+(and ccl linux)
+(defun tempnam (dir prefix)
+  (ccl:with-filename-cstrs ((base dir) (prefix (or prefix "")))
+    (ccl:get-foreign-namestring
+     (ccl:external-call "tempnam" :address base :address prefix :address))))
+
+#+(and ccl windows)
+(defun tempnam (dir prefix)
+  (ccl:with-filename-cstrs ((base (or dir "")) (prefix (or prefix "")))
+    (ccl:%get-cstring
+     (ccl:external-call "_tempnam" :address
+                        base :address
+                        prefix :address))))
+
+#+ecl
+(defun tempnam (dir &optional prefix)
+  (let ((dir-name (uiop:ensure-directory-pathname
+                   (or dir *temporary-directory*))))
+    (ext:mkstemp (if prefix
+                     (uiop::merge-pathnames dir-name prefix)
+                     dir-name))))
+
+(defun delete-path (path)
+  "Delete anything (file or directory) at PATH."
+  (let ((probe (probe-file path)))
+    (when probe
+      (if (equal (directory-namestring probe)
+                 (namestring probe))
+          (delete-directory-tree (ensure-directory-pathname probe)
+           :validate t)
+          (delete-file path)))))
 
 (defun directory-p (pathname)
   "Return a directory version of PATHNAME if it indicates a directory."
