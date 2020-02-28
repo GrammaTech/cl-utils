@@ -26,6 +26,7 @@
   (:import-from :uiop/run-program :run-program)
   (:import-from :uiop/os :chdir :getcwd)
   (:import-from :uiop/stream
+                :default-temporary-directory
                 :detect-encoding
                 :encoding-external-format)
   (:import-from :osicat :file-permissions :pathname-as-directory)
@@ -247,7 +248,7 @@ may lose the original working directory."
          (progn (cd ,dir) ,@body)
          (cd ,orig)))))
 
-(defvar *temp-dir* nil
+(defvar *temp-dir* (namestring (default-temporary-directory))
   "Set to non-nil for a custom temporary directory.")
 
 (defun temp-file-name (&optional type)
