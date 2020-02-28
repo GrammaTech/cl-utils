@@ -38,6 +38,9 @@
    :file-to-bytes
    :string-to-file
    :bytes-to-file
+   :file-access
+   :file-access-path
+   :file-access-operation
    ;; Temporary files
    :*temp-dir*
    :with-temp-file
@@ -47,10 +50,6 @@
    :with-temp-fifo
    :temp-file-name
    :delete-path
-   :pathname-relativize
-   :truenamestring
-   :in-directory
-   :directory-p
    ;; cl-fad
    :merge-pathnames-as-file
    :merge-pathnames-as-directory
@@ -59,6 +58,8 @@
    :list-directory
    :walk-directory
    ;; Other filename/pathname.
+   :pathname-relativize
+   :directory-p
    :getcwd
    :with-current-directory
    :file-permissions
@@ -80,10 +81,10 @@ The Unix `file' command is used, specifically \"file -b --mime-type PATH\"."
   (labels
       ((run-read ()
          (let (#+sbcl (sb-impl::*default-external-format* external-format)
-                      #+ecl (ext:*default-external-format* external-format)
-                      (element-type (case external-format
-                                      (:ascii 'base-char)
-                                      (t 'character))))
+               #+ecl (ext:*default-external-format* external-format)
+               (element-type (case external-format
+                               (:ascii 'base-char)
+                               (t 'character))))
            (with-open-file (in filespec :element-type element-type)
              (let* ((file-bytes (file-length in))
                     (seq (make-string file-bytes :element-type element-type))
@@ -131,6 +132,8 @@ The Unix `file' command is used, specifically \"file -b --mime-type PATH\"."
                      (file-access-path condition)))))
 
 ;;; TODO: Replace with `alexandria:write-string-into-file'?
+;;; We would need to add additional wrapper logic to handle
+;;; encodings properly.
 (defun string-to-file (string filespec &key
                                          (if-exists :supersede)
                                          (external-format :default))
@@ -178,15 +181,11 @@ USE-ENCODING. "
                        :direction :output :if-exists if-exists)
     (write-sequence bytes out)))
 
-(defun pathname-relativize (root-path path)
-  "Return PATH relative to ROOT-PATH."
-  (string-replace-all
-   (namestring (canonical-pathname path))
-   (namestring (canonical-pathname (ensure-directory-pathname root-path)))
-   ""))
-
 
 ;;; Temporary files
+(defvar *temp-dir* (namestring (default-temporary-directory))
+  "Set to non-nil for a custom temporary directory.")
+
 (defmacro with-temp-file (spec &rest body)
   "SPEC holds the variable used to reference the file w/optional extension.
 After BODY is executed the temporary file is removed."
@@ -228,9 +227,6 @@ The first form passed to `with-temporary-fifo' is passed through to
      #-windows (osicat-posix:mkfifo ,(car spec) (logior osicat-posix:s-iwusr
                                                         osicat-posix:s-irusr))
      ,@body))
-
-(defvar *temp-dir* (namestring (default-temporary-directory))
-  "Set to non-nil for a custom temporary directory.")
 
 (defun temp-file-name (&optional type)
   (let ((base
@@ -290,16 +286,6 @@ The first form passed to `with-temporary-fifo' is passed through to
           (delete-directory-tree (ensure-directory-pathname probe)
            :validate t)
           (delete-file path)))))
-
-(defun directory-p (pathname)
-  "Return a directory version of PATHNAME if it indicates a directory."
-  (cond
-    ((directory-pathname-p pathname) pathname)
-    ;; Wild pathnames are not directory pathnames.
-    ;; Also, `directory-exists-p' faults on wild pathnames.
-    ((wild-pathname-p pathname) nil)
-    ;; `directory-exists-p' (like this function) returns the pathname.
-    (t (directory-exists-p (pathname-as-directory pathname)))))
 
 
 ;;;; Utilities from cl-fad.
@@ -485,3 +471,22 @@ supported on all platforms.  See LIST-DIRECTORY."
         (otherwise
          (error "IF-DOES-NOT-EXIST must be one of :ERROR or :IGNORE."))))
     (values)))
+
+
+;; Other pathname utilities (delete?)
+(defun pathname-relativize (root-path path)
+  "Return PATH relative to ROOT-PATH."
+  (string-replace-all
+   (namestring (canonical-pathname path))
+   (namestring (canonical-pathname (ensure-directory-pathname root-path)))
+   ""))
+
+(defun directory-p (pathname)
+  "Return a directory version of PATHNAME if it indicates a directory."
+  (cond
+    ((directory-pathname-p pathname) pathname)
+    ;; Wild pathnames are not directory pathnames.
+    ;; Also, `directory-exists-p' faults on wild pathnames.
+    ((wild-pathname-p pathname) nil)
+    ;; `directory-exists-p' (like this function) returns the pathname.
+    (t (directory-exists-p (pathname-as-directory pathname)))))

@@ -16,16 +16,16 @@
 ;;;; dumping profiling information into a format usably for the
 ;;;; generation of flame graphs (see http://oprofile.sourceforge.net/news/)
 (uiop/package:define-package :gt/profile
-    (:use :common-lisp :alexandria :iterate :gt/misc :arrow-macros
-          :cl-ppcre :split-sequence
-          :named-readtables :curry-compose-reader-macros)
+  (:use :common-lisp :alexandria :iterate :gt/misc :arrow-macros
+        :cl-ppcre :split-sequence
+        :named-readtables :curry-compose-reader-macros)
   (:import-from :cl-dot)
   (:import-from :uiop/run-program :run-program)
   (:import-from :uiop/os :getenv)
   (:export :*profile-dot-min-ratio*
+           :*profile-flame-graph*
            :profile-to-dot-graph
            :profile-to-flame-graph
-           :*profile-flame-graph*
            :with-prof))
 (in-package :gt/profile)
 (in-readtable :curry-compose-reader-macros)
@@ -162,8 +162,9 @@ to a file at PROFILE-PATH.  Currently only works in SBCL."
                                        :if-does-not-exist :create)
                (sb-sprof:report :stream out))))
        (progn ,@body))
-  #-sbcl `(progn
-            (when ,profile-path
-              (with-output-to-file (out ,profile-path)
-                (format out "Not profiling.~%")))
-            ,@body))
+  #-sbcl
+  `(progn
+     (when ,profile-path
+       (with-output-to-file (out ,profile-path)
+         (format out "Not profiling.~%")))
+     ,@body))

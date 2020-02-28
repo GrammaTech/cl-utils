@@ -11,44 +11,52 @@
 ;;;; not necessarily reflect the position or policy of the Government
 ;;;; and no official endorsement should be inferred.
 (uiop/package:define-package :gt/misc
-    (:use :common-lisp :alexandria
-          :metabang-bind
-          :closer-mop
-          :iterate
-          :named-readtables
-          :curry-compose-reader-macros)
+  (:use :common-lisp :alexandria
+        :metabang-bind
+        :closer-mop
+        :iterate
+        :named-readtables
+        :curry-compose-reader-macros)
   (:import-from :serapeum :mapconcat :drop-while :take-while :plist-keys)
   (:import-from :uiop/utility :with-muffled-conditions)
+  #+sbcl
+  (:import-from :sb-introspect :function-lambda-list)
   (:shadowing-import-from
    :closer-mop
    :standard-method :standard-class :standard-generic-function
    :defmethod :defgeneric)
-  (:export :arglist
-           :show-it
-           :equal-it
-           :count-cons
-           :tree-right-length
-           :tree-right-walk
-           ;; simple utility
+  (:export ;; compilation and introspection
            :*uninteresting-conditions*
            :with-muffled-conditions
            :with-quiet-compilation
+           :arglist
+           ;; macros and macro-related functions
            :if-let*
-           :repeatedly
-           :indexed
-           :different-it
+           :symbol-cat
+           :symbol-cat-in-package
+           ;; trees
            :mapt
+           :tree-right-length
+           :tree-right-walk
+           :filter-subtrees
+           ;; plists
            :plist-get
            :plist-drop-if
            :plist-drop
            :plist-merge
+           ;; alists
+           :aget
+           :areplace
+           :adrop
+           :alist-filter
+           :getter
            :counts
-           :proportional-pick
+           ;; probability and statistics
            :position-extremum
            :position-extremum-rand
            :random-bool
            :random-elt-with-decay
-           :random-hash-table-key
+           :proportional-pick
            :uniform-probability
            :normalize-probabilities
            :cumulative-distribution
@@ -57,14 +65,13 @@
            :random-subseq
            :random-sample-with-replacement
            :random-sample-without-replacement
+           ;; string replacement
            :apply-replacements
-           :mapcar-improper-list
            :replace-all
-           :aget
-           :areplace
-           :adrop
-           :alist-filter
-           :getter
+           ;; lists
+           :repeatedly
+           :indexed
+           :different-it
            :transpose
            :interleave
            :drop-until
@@ -76,19 +83,33 @@
            :binary-search
            :tails
            :pairs
-           :filter-subtrees
+           :mapcar-improper-list
+           ;; hash tables
            :make-thread-safe-hash-table
-           ;; symbols
-           :symbol-cat
-           :symbol-cat-in-package))
+           :random-hash-table-key))
 (in-package :gt/misc)
 (in-readtable :curry-compose-reader-macros)
+
+
+;;;; Compilation and introspection
+(defvar *uninteresting-conditions* nil
+  "Additional uninteresting conditions for `with-quiet-compilation' to stifle.")
+
+(defmacro with-quiet-compilation (&body body)
+  `(let ((*load-verbose* nil)
+         (*compile-verbose* nil)
+         (*load-print* nil)
+         (*compile-print* nil)
+         (uiop/lisp-build:*uninteresting-conditions*
+          (append *uninteresting-conditions*
+                  uiop/lisp-build:*usual-uninteresting-conditions*)))
+     ,@body))
 
 (defun arglist (fname)
   "Return the argument list of FNAME."
   ;; Taken from swank/backend:arglist.
   #+sbcl
-  (sb-introspect:function-lambda-list fname)
+  (function-lambda-list fname)
   ;; NOTE: The following is similar, but may return 0 for nil args.
   ;; (sb-kernel:%simple-fun-arglist fname)
   #+ecl
@@ -104,19 +125,8 @@
   #-(or ecl sbcl ccl)
   (error "Only ECL, SBCL, and CCL."))
 
-(defvar *uninteresting-conditions* nil
-  "Additional uninteresting conditions for `with-quiet-compilation' to stifle.")
-
-(defmacro with-quiet-compilation (&body body)
-  `(let ((*load-verbose* nil)
-         (*compile-verbose* nil)
-         (*load-print* nil)
-         (*compile-print* nil)
-         (uiop/lisp-build:*uninteresting-conditions*
-          (append *uninteresting-conditions*
-                  uiop/lisp-build:*usual-uninteresting-conditions*)))
-     ,@body))
-
+
+;;;; Macros and macro-related functions
 (defmacro if-let* (bindings &body (then-form &optional else-form))
   "Creates new bindings, and conditionally executes THEN-FORM or ELSE-FORM.
 
@@ -156,52 +166,17 @@ is executed."
                ,@(bind (cdr binding-list) then-form)))
            ,else-form)))))
 
-(defmacro repeatedly (times &rest body)
-  (let ((ignored (gensym)))
-    `(loop :for ,ignored :below ,times :collect ,@body)))
+(defun symbol-cat (&rest symbols)
+  "Return a symbol concatenation of SYMBOLS."
+  (intern (string-upcase (mapconcat #'symbol-name symbols "-"))))
 
-(defun indexed (list)
-  (loop :for element :in list :as i :from 0 :collect (list i element)))
+(defun symbol-cat-in-package (package &rest symbols)
+  "Return a symbol concatenation of SYMBOLS in PACKAGE."
+  (intern (string-upcase (mapconcat #'symbol-name symbols "-"))
+          package))
 
-(defun different-it (obj1 obj2 &optional trace)
-  (let ((trace1 (concatenate 'list (list obj1 obj2) trace)))
-    (cond
-      ((or (member obj1 trace) (member obj2 trace)) t)
-      ((or (and (vectorp obj1) (vectorp obj2))
-           (and (proper-list-p obj1) (proper-list-p obj2)))
-       (and (or (equal (length obj1) (length obj2))
-                (format t "~&different lengths ~a!=~a"
-                        (length obj1) (length obj2)))
-            (reduce (lambda-bind (acc (i (a b)))
-                      (and acc (or (different-it a b trace1)
-                                   (format t "~& at ~d ~a!=~a" i a b))))
-                    (indexed
-                     (if (vectorp obj1)
-                         (mapcar #'list (coerce obj1 'list) (coerce obj2 'list))
-                         (mapcar #'list obj1 obj2)))
-                    :initial-value t)))
-      ((and (consp obj1) (consp obj2))
-       (and (different-it (car obj1) (car obj2))
-            (different-it (cdr obj1) (cdr obj2))))
-      ((class-slots (class-of obj1))
-       (reduce (lambda (acc slot)
-                 (and acc (or (different-it
-                               (slot-value obj1 slot) (slot-value obj2 slot)
-                               trace1)
-                              (format t "~&  ~a" slot))))
-               (mapcar #'slot-definition-name
-                       (class-slots (class-of obj1)))
-               :initial-value t))
-      (t (or (equal obj1 obj2) (format t "~&~a!=~a" obj1 obj2))))))
-
-(defun count-cons (cons-cell)
-  "Count and return the number of cons cells used in CONS-CELL."
-  ;; TODO: extend to map over the fields in an object.
-  (the fixnum (if (consp cons-cell)
-                  (+ (count-cons (car cons-cell))
-                     (count-cons (cdr cons-cell)))
-                  1)))
-
+
+;;;; Tree-related functions
 (defun tree-right-length (tree &aux (size 1))
   "Return the length of the right spine of TREE."
   (declare (optimize speed))
@@ -219,17 +194,6 @@ is executed."
           (list tree))
       nil))
 
-
-;;;; Generic utility functions
-;;;
-;;; Generic utility functions on cons tree, association lists, plists,
-;;; and sequences.  Includes some random and statistical functions as
-;;; well as string manipulation functions..
-;;;
-;;; DOXFIXME: for each of the above briefly describe the important
-;;; functions with links to the index.
-;;;
-;;; @texi{generic-utility}
 (defun mapt (function tree)
   "Like `mapcar' but TREE is a cons tree instead of a proper list."
   (if (consp tree)
@@ -237,6 +201,19 @@ is executed."
             (mapt function (cdr tree)))
       (funcall function tree)))
 
+(defgeneric filter-subtrees (predicate tree)
+  (:documentation "Return a list of subtrees of TREE satisfying PREDICATE.")
+  (:method filter-subtrees (predicate (tree list))
+    (when (and tree (listp tree))
+      (append
+       (when (funcall predicate tree) (list tree))
+       (when (listp (car tree))
+         (filter-subtrees predicate (car tree)))
+       (when (listp (cdr tree))
+         (filter-subtrees predicate (cdr tree)))))))
+
+
+;;;; plist functions
 (defun plist-get (item list &key (test #'eql) &aux last)
   (loop :for element :in list :do
      (cond
@@ -258,6 +235,51 @@ is executed."
   "Merge arguments into a single plist with unique keys, prefer PLIST-1 items."
   (append plist-1 (plist-drop-if {member _ (plist-keys plist-1)} plist-2)))
 
+
+;;;; alist functions
+(defun aget (item list &key (test #'eql))
+  "Get KEY from association list LIST."
+  (cdr (assoc item list :test test)))
+
+(define-compiler-macro aget (&whole whole item list &key (test '#'eql test-p))
+  (if (constantp item)
+      (if test-p
+          `(cdr (assoc ,item ,list :test ,test))
+          `(cdr (assoc ,item ,list)))
+      whole))
+
+(define-setf-expander aget (item list &key (test ''eql) &environment env)
+  (multiple-value-bind (dummies vals stores store-form access-form)
+      (get-setf-expansion list env)
+    (declare (ignorable stores store-form))
+    (let ((store (gensym))
+          (cons-sym (gensym)))
+      (values dummies
+              vals
+              `(,store)
+              `(let ((,cons-sym (assoc ,item ,access-form :test ,test)))
+                 (if ,cons-sym
+                     (setf (cdr ,cons-sym) ,store)
+                     (prog1 ,store
+                       (setf ,access-form (acons ,item ,store ,access-form)))))
+              `(aget ,item ,access-form :test ,test)))))
+
+(defun areplace (key val alist &key (test #'eql))
+  "Replace the value of KEY in the association list ALIST with VAL."
+  (cons (cons key val) (remove key alist :key #'car :test test)))
+
+(defun adrop (drop-keys alist)
+  "Remove all keys in DROP-KEYS from alist."
+  (remove-if [{member _ drop-keys} #'car] alist))
+
+(defun alist-filter (keep-keys alist)
+  "Remove all keys from ALIST except those in KEEP-KEYS."
+  (remove-if-not [{member _ keep-keys} #'car] alist))
+
+(defun getter (key)
+  "Return a function which gets KEY from an association list."
+  (lambda (it) (aget key it)))
+
 (defun counts (list &key (test #'eql) key frac &aux totals)
   "Return an alist keyed by the unique elements of list holding their counts.
 Keyword argument FRAC will return fractions instead of raw counts."
@@ -271,6 +293,8 @@ Keyword argument FRAC will return fractions instead of raw counts."
         (mapcar (lambda-bind ((obj . cnt)) (cons obj (/ cnt total))) totals))
       totals))
 
+
+;;;; Probablity and statistics functions
 (defun proportional-pick (list key)
   (let ((raw (reduce (lambda (acc el) (cons (+ el (car acc)) acc))
                      (mapcar key list) :initial-value '(0))))
@@ -372,33 +396,8 @@ transformed from an instant to a cumulative probability."
          (dotimes (n size sorted)
            (setf sorted (sorted-insert sorted (random (- range n))))))))))
 
-(defun find-hashtable-element (hash-tbl n)
-  (maphash
-   (lambda (k v)
-     (declare (ignore v))
-     (when (= n 0) (return-from find-hashtable-element k))
-     (decf n))
-   hash-tbl))
-
-(defun random-hash-table-key (hash-tbl)
-  "Return a random key in a hash table"
-  (let ((size (hash-table-count hash-tbl)))
-    (unless (zerop size)
-      (find-hashtable-element hash-tbl (random size)))))
-
-(defun mapcar-improper-list (fn list)
-  "Apply FN to the elements of a possibly improper list LIST,
-including the final non-nil tail element, if any.  Return a fresh
-list composed of the value returned by each application.  Does
-not work on circular lists."
-  (let* ((head (list nil))
-         (tail head))
-    (iter (while (consp list))
-          (setf tail (setf (cdr tail)
-                           (list (funcall fn (pop list))))))
-    (when list
-      (setf (cdr tail) (funcall fn list)))
-    (cdr head)))
+
+;;;; String replacement functions
 
 ;; From the Common Lisp Cookbook
 (defgeneric replace-all (string part replacement &key test)
@@ -448,48 +447,45 @@ occurences of the part is replaced with replacement."))
                  str)))
         (apply-replacements (cdr list) new-str))))
 
-(defun aget (item list &key (test #'eql))
-  "Get KEY from association list LIST."
-  (cdr (assoc item list :test test)))
+
+;;;; General list-related utilities
+(defmacro repeatedly (times &rest body)
+  (let ((ignored (gensym)))
+    `(loop :for ,ignored :below ,times :collect ,@body)))
 
-(define-compiler-macro aget (&whole whole item list &key (test '#'eql test-p))
-  (if (constantp item)
-      (if test-p
-          `(cdr (assoc ,item ,list :test ,test))
-          `(cdr (assoc ,item ,list)))
-      whole))
+(defun indexed (list)
+  (loop :for element :in list :as i :from 0 :collect (list i element)))
 
-(define-setf-expander aget (item list &key (test ''eql) &environment env)
-  (multiple-value-bind (dummies vals stores store-form access-form)
-      (get-setf-expansion list env)
-    (declare (ignorable stores store-form))
-    (let ((store (gensym))
-          (cons-sym (gensym)))
-      (values dummies
-              vals
-              `(,store)
-              `(let ((,cons-sym (assoc ,item ,access-form :test ,test)))
-                 (if ,cons-sym
-                     (setf (cdr ,cons-sym) ,store)
-                     (prog1 ,store
-                       (setf ,access-form (acons ,item ,store ,access-form)))))
-              `(aget ,item ,access-form :test ,test)))))
-
-(defun areplace (key val alist &key (test #'eql))
-  "Replace the value of KEY in the association list ALIST with VAL."
-  (cons (cons key val) (remove key alist :key #'car :test test)))
-
-(defun adrop (drop-keys alist)
-  "Remove all keys in DROP-KEYS from alist."
-  (remove-if [{member _ drop-keys} #'car] alist))
-
-(defun alist-filter (keep-keys alist)
-  "Remove all keys from ALIST except those in KEEP-KEYS."
-  (remove-if-not [{member _ keep-keys} #'car] alist))
-
-(defun getter (key)
-  "Return a function which gets KEY from an association list."
-  (lambda (it) (aget key it)))
+(defun different-it (obj1 obj2 &optional trace)
+  (let ((trace1 (concatenate 'list (list obj1 obj2) trace)))
+    (cond
+      ((or (member obj1 trace) (member obj2 trace)) t)
+      ((or (and (vectorp obj1) (vectorp obj2))
+           (and (proper-list-p obj1) (proper-list-p obj2)))
+       (and (or (equal (length obj1) (length obj2))
+                (format t "~&different lengths ~a!=~a"
+                        (length obj1) (length obj2)))
+            (reduce (lambda-bind (acc (i (a b)))
+                      (and acc (or (different-it a b trace1)
+                                   (format t "~& at ~d ~a!=~a" i a b))))
+                    (indexed
+                     (if (vectorp obj1)
+                         (mapcar #'list (coerce obj1 'list) (coerce obj2 'list))
+                         (mapcar #'list obj1 obj2)))
+                    :initial-value t)))
+      ((and (consp obj1) (consp obj2))
+       (and (different-it (car obj1) (car obj2))
+            (different-it (cdr obj1) (cdr obj2))))
+      ((class-slots (class-of obj1))
+       (reduce (lambda (acc slot)
+                 (and acc (or (different-it
+                               (slot-value obj1 slot) (slot-value obj2 slot)
+                               trace1)
+                              (format t "~&  ~a" slot))))
+               (mapcar #'slot-definition-name
+                       (class-slots (class-of obj1)))
+               :initial-value t))
+      (t (or (equal obj1 obj2) (format t "~&~a!=~a" obj1 obj2))))))
 
 (defun transpose (matrix)
   "Simple matrix transposition."
@@ -584,19 +580,22 @@ For example (pairs '(a b c)) => ('(a . b) '(a . c) '(b . c))
         (appending (iter (for b in rest)
                          (collecting (cons a b))))))
 
-(defgeneric filter-subtrees (predicate tree)
-  (:documentation "Return a list of subtrees of TREE satisfying PREDICATE."))
+(defun mapcar-improper-list (fn list)
+  "Apply FN to the elements of a possibly improper list LIST,
+including the final non-nil tail element, if any.  Return a fresh
+list composed of the value returned by each application.  Does
+not work on circular lists."
+  (let* ((head (list nil))
+         (tail head))
+    (iter (while (consp list))
+          (setf tail (setf (cdr tail)
+                           (list (funcall fn (pop list))))))
+    (when list
+      (setf (cdr tail) (funcall fn list)))
+    (cdr head)))
 
-(defmethod filter-subtrees (predicate (tree list))
-  "Return a list of subtrees of TREE satisfying PREDICATE."
-  (when (and tree (listp tree))
-    (append
-     (when (funcall predicate tree) (list tree))
-     (when (listp (car tree))
-       (filter-subtrees predicate (car tree)))
-     (when (listp (cdr tree))
-       (filter-subtrees predicate (cdr tree))))))
-
+
+;;; Hash-table related functions
 (defun make-thread-safe-hash-table (&rest args)
   "Create a thread safe hash table with the given ARGS"
   #+(or sbcl ecl)
@@ -606,13 +605,16 @@ For example (pairs '(a b c)) => ('(a . b) '(a . c) '(b . c))
   #-(or ccl sbcl ecl)
   (error "unsupported implementation for thread-safe hashtables"))
 
-
-;;;; Symbol-related functions (useful for macros)
-(defun symbol-cat (&rest symbols)
-  "Return a symbol concatenation of SYMBOLS."
-  (intern (string-upcase (mapconcat #'symbol-name symbols "-"))))
+(defun find-hash-table-element (hash-tbl n)
+  (maphash
+   (lambda (k v)
+     (declare (ignore v))
+     (when (= n 0) (return-from find-hash-table-element k))
+     (decf n))
+   hash-tbl))
 
-(defun symbol-cat-in-package (package &rest symbols)
-  "Return a symbol concatenation of SYMBOLS in PACKAGE."
-  (intern (string-upcase (mapconcat #'symbol-name symbols "-"))
-          package))
+(defun random-hash-table-key (hash-tbl)
+  "Return a random key in a hash table"
+  (let ((size (hash-table-count hash-tbl)))
+    (unless (zerop size)
+      (find-hash-table-element hash-tbl (random size)))))

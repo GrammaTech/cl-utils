@@ -22,7 +22,7 @@
 ;;;; shell commands and common lisp streams (in some cases flowing from
 ;;;; or into files on disk).
 (uiop/package:define-package :gt/shell
-    (:use-reexport :uiop/launch-program)
+  (:use-reexport :uiop/launch-program)
   (:use :common-lisp :alexandria :iterate :gt/misc :gt/filesystem :arrow-macros
         :cl-ppcre :flexi-streams :split-sequence)
   (:import-from :uiop/run-program :run-program)
