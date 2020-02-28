@@ -24,7 +24,8 @@
                           :summing :collecting :sum :in)
   (:import-from :split-sequence :split-sequence)
   (:import-from :uiop/run-program :run-program)
-  (:import-from :uiop/os :chdir :getcwd)
+  (:import-from :uiop/os :getcwd)
+  (:import-from :uiop/filesystem :with-current-directory)
   (:import-from :uiop/stream
                 :default-temporary-directory
                 :detect-encoding
@@ -45,8 +46,6 @@
    :with-temp-fifo
    :temp-file-name
    :delete-path
-   :getcwd
-   :with-cwd
    :pathname-relativize
    :truenamestring
    :in-directory
@@ -59,6 +58,8 @@
    :list-directory
    :walk-directory
    ;; Other filename/pathname.
+   :getcwd
+   :with-current-directory
    :file-permissions
    :pathname-as-directory))
 (in-package :gt/filesystem)
@@ -226,27 +227,6 @@ The first form passed to `with-temporary-fifo' is passed through to
      #-windows (osicat-posix:mkfifo ,(car spec) (logior osicat-posix:s-iwusr
                                                         osicat-posix:s-irusr))
      ,@body))
-
-(defun cd (directory)
-  (let ((pathname (probe-file directory)))
-    (unless pathname
-      (error "Directory ~S does not exist." directory))
-    (unless (directory-exists-p (ensure-directory-pathname pathname))
-      (error "Directory ~S is not a directory." directory))
-    (setf *default-pathname-defaults* pathname)
-    (chdir pathname)))
-
-;;; TODO: Replace with `with-current-directory' from UIOP.
-(defmacro with-cwd ((dir) &rest body)
-  "Change the current working directory to dir and execute body.
-WARNING: This function is not thread safe.  Execution in a threaded
-environment may causes execution outside of the intended directory or
-may lose the original working directory."
-  (with-gensyms (orig)
-    `(let ((,orig (getcwd)))
-       (unwind-protect
-         (progn (cd ,dir) ,@body)
-         (cd ,orig)))))
 
 (defvar *temp-dir* (namestring (default-temporary-directory))
   "Set to non-nil for a custom temporary directory.")
