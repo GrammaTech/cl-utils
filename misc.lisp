@@ -32,6 +32,7 @@
            :arglist
            ;; macros and macro-related functions
            :if-let*
+           :multiple-value-or
            :symbol-cat
            :symbol-cat-in-package
            ;; trees
@@ -165,6 +166,19 @@ is executed."
              (when ,(caar binding-list)
                ,@(bind (cdr binding-list) then-form)))
            ,else-form)))))
+
+(defmacro multiple-value-or (&body forms)
+  "Evaluates FORM arguments one at time, until the first value returned
+by one of the forms is true.  It then returns all the values returned
+by evaluating that form.  If none of the forms return a true first
+value, we return the values returned by the last form."
+  (with-gensyms (values)
+    `(let ((,values (multiple-value-list ,(first forms))))
+       (if (car ,values)
+           (values-list ,values)
+           ,(if (rest forms)
+                `(multiple-value-or ,@(rest forms))
+                `(values-list ,values))))))
 
 (defun symbol-cat (&rest symbols)
   "Return a symbol concatenation of SYMBOLS."
