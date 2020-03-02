@@ -156,13 +156,16 @@ Optionally print debug information if `*shell-debug*' is non-nil."
       (progn
         (with-temp-file (stdout-file)
           (with-temp-file (stderr-file)
-            (setf errno (nth-value 2 (apply #'run-program
-                                            (format nil "~a 1>~a 2>~a"
-                                                    cmd stdout-file stderr-file)
-                                            :force-shell t
-                                            :ignore-error-status t
-                                            :input input
-                                            run-program-arguments)))
+            (loop :for i :from 0 :to 5
+                  :until (setf errno
+                               (nth-value 2 (apply #'run-program
+                                                   (format nil "~a 1>~a 2>~a"
+                                                           cmd stdout-file stderr-file)
+                                                   :force-shell t
+                                                   :ignore-error-status t
+                                                   :input input
+                                                   run-program-arguments)))
+                  :do (sleep 1.0))
             (setf stdout-str (if (probe-file stdout-file)
                                  (file-to-string stdout-file)
                                  ""))
