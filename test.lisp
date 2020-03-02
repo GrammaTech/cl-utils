@@ -53,6 +53,10 @@
 (defsuite test)
 (in-suite test)
 
+(deftest file-to-string-empty-file ()
+  (with-temp-file-of (tmp) ""
+    (is (equal "" (file-to-string tmp)))))
+
 (deftest file-to-string-non-utf8-encoding ()
   #-ccl       ; CCL silently reads w/o warning despite bad encoding...
   (is (string= (file-to-string (make-pathname :directory +etc-dir+

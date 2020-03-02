@@ -73,16 +73,23 @@ The Unix `file' command is used, specifically \"file -b --mime-type PATH\"."
   (nest (mapcar #'intern) (split-sequence #\/) (string-upcase) (trim-whitespace)
         (run-program (format nil "file -b --mime-type ~a" (namestring path)))))
 
-(defun file-to-string
-    (filespec &key (external-format
-                    (encoding-external-format (detect-file-encoding filespec))))
+(defun file-to-string (filespec &key external-format)
   "Return the contents of FILESPEC as a string."
   #+ccl (declare (ignorable external-format))
   (labels
-      ((run-read ()
-         (let (#+sbcl (sb-impl::*default-external-format* external-format)
-               #+ecl (ext:*default-external-format* external-format)
-               (element-type (case external-format
+      ((get-external-format ()
+         (or external-format
+             (let ((guess (encoding-external-format
+                            (detect-file-encoding filespec))))
+               (if (eq guess :default)
+                   #+sbcl sb-impl::*default-external-format*
+                   #+ecl ext:*default-external-format*
+                   #-(or sbcl ecl) :latin-1
+                   guess))))
+       (run-read ()
+         (let (#+sbcl (sb-impl::*default-external-format* (get-external-format))
+               #+ecl (ext:*default-external-format* (get-external-format))
+               (element-type (case (get-external-format)
                                (:ascii 'base-char)
                                (t 'character))))
            (with-open-file (in filespec :element-type element-type)
