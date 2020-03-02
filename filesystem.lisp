@@ -290,8 +290,10 @@ The first form passed to `with-temporary-fifo' is passed through to
     (when probe
       (if (equal (directory-namestring probe)
                  (namestring probe))
-          (delete-directory-tree (ensure-directory-pathname probe)
-           :validate t)
+          (if (null (list-directory probe))
+              (delete-directory-tree (ensure-directory-pathname probe)
+                                     :validate t)
+              (run-program (concatenate 'string "rm -rf " (namestring probe))))
           (delete-file path)))))
 
 
