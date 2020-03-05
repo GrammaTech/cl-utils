@@ -29,6 +29,7 @@
            :*uninteresting-conditions*
            :with-muffled-conditions
            :with-quiet-compilation
+           :without-compiler-notes
            :arglist
            ;; macros and macro-related functions
            :if-let*
@@ -105,6 +106,14 @@
           (append *uninteresting-conditions*
                   uiop/lisp-build:*usual-uninteresting-conditions*)))
      ,@body))
+
+(defmacro without-compiler-notes (&body body)
+  "Suppress compiler notes from BODY"
+  #+sbcl
+  `(locally (declare (sb-ext:muffle-conditions sb-ext:compiler-note))
+     ,@body)
+  #-sbcl
+  `(progn ,@body))
 
 (defun arglist (fname)
   "Return the argument list of FNAME."
