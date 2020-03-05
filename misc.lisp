@@ -73,6 +73,7 @@
            ;; lists
            :repeatedly
            :indexed
+           :equal-it
            :different-it
            :transpose
            :interleave
@@ -478,6 +479,35 @@ occurences of the part is replaced with replacement."))
 
 (defun indexed (list)
   (loop :for element :in list :as i :from 0 :collect (list i element)))
+
+(defun equal-it (obj1 obj2 &optional trace inhibit-slots)
+  "Equal over objects and lists."
+  (let ((trace1 (concatenate 'list (list obj1 obj2) trace)))
+    (cond
+      ((or (member obj1 trace) (member obj2 trace)) t)
+      ((and (listp obj1) (not (listp (cdr obj1)))
+            (listp obj2) (not (listp (cdr obj2))))
+       (and (equal-it (car obj1) (car obj2))
+            (equal-it (cdr obj1) (cdr obj2))))
+      ((or (and (listp obj1) (listp obj2)) (and (vectorp obj1) (vectorp obj2)))
+       (and (equal (length obj1) (length obj2))
+            (reduce (lambda (acc pair)
+                      (and acc (equal-it (car pair) (cdr pair) trace1)))
+                    (if (vectorp obj1)
+                        (mapcar #'cons (coerce obj1 'list) (coerce obj2 'list))
+                        (mapcar #'cons obj1 obj2))
+                    :initial-value t)))
+      ((class-slots (class-of obj1))
+       (reduce
+        (lambda (acc slot)
+          (and acc (equal-it (slot-value obj1 slot) (slot-value obj2 slot)
+                             trace1)))
+        (remove-if [{member _ inhibit-slots :test #'string= :key #'symbol-name}
+                    #'symbol-name]
+                   (mapcar #'slot-definition-name
+                           (class-slots (class-of obj1))))
+        :initial-value t))
+      (t (equal obj1 obj2)))))
 
 (defun different-it (obj1 obj2 &optional trace)
   (let ((trace1 (concatenate 'list (list obj1 obj2) trace)))
