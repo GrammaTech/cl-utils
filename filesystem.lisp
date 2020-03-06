@@ -203,7 +203,8 @@ After BODY is executed the temporary file is removed."
 The first form passed to `with-temp-dir' is passed through
 to `with-temp-file' to create path to the temporary directory."
   `(with-temp-file ,spec
-     (ensure-directories-exist (ensure-directory-pathname ,(car spec)))
+     (setf ,(car spec) (namestring (ensure-directory-pathname ,(car spec))))
+     (ensure-directories-exist ,(car spec))
      ,@body))
 
 (defmacro with-temp-dir-of (spec dir &rest body)
