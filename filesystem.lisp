@@ -486,8 +486,8 @@ supported on all platforms.  See LIST-DIRECTORY."
 (defun pathname-relativize (root-path path)
   "Return PATH relative to ROOT-PATH."
   (string-replace-all
-   (namestring (canonical-pathname path))
    (namestring (canonical-pathname (ensure-directory-pathname root-path)))
+   (namestring (canonical-pathname path))
    ""))
 
 (defun directory-p (pathname)
