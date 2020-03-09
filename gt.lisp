@@ -13,7 +13,7 @@
 (uiop/package:define-package :gt
     (:nicknames :gt/gt)
   (:use-reexport :common-lisp :alexandria :serapeum :closer-mop
-                 :trivia :iterate :fset :gmap :split-sequence :cl-ppcre
+                 :trivia :iterate :gt/fset :fset :gmap :split-sequence :cl-ppcre
                  :bordeaux-threads
                  :functional-trees
                  :named-readtables :curry-compose-reader-macros)
@@ -39,13 +39,11 @@
   (:shadowing-import-from :functional-trees :map-tree)
   (:shadowing-import-from :fset
                           :@
-                          :unionf :appendf :with :removef :size
+                          :unionf :appendf :with :removef :size :complement
                           ;; Shadowed type/constructor names.
                           :set
-                          ;; Shadowed set operations.
-                          :union :intersection :set-difference :complement
                           ;; Shadowed sequence operations.
-                          :first :last :subseq :reverse :sort :stable-sort
+                          :first :subseq :reverse :sort :stable-sort
                           :reduce
                           :find :find-if :find-if-not
                           :count :count-if :count-if-not
@@ -55,6 +53,9 @@
                           :some :every :notany :notevery
                           ;; Shadowed sequence operations from serapeum.
                           :concat :range :partition :filter)
+  (:shadowing-import-from :gt/fset
+                          :last
+                          :union :intersection :set-difference)
   (:shadowing-import-from :cl-ppcre
                           :scan)        ; Shadow serapeum:scan.
   (:export :mapconcat
