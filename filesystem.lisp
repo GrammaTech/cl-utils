@@ -1,9 +1,21 @@
 ;;;; filesystem.lisp --- Files and Directories
-;;;
-;;; Functions for working with file and directories.  Includes
-;;; functions for efficient serialization to/from files as well as
-;;; functions for creating and using temporary files and directories.
-;;;
+;;;;
+;;;; Copyright (C) 2020 GrammaTech, Inc.
+;;;;
+;;;; This code is licensed under the MIT license. See the LICENSE.txt
+;;;; file in the project root for license terms.
+;;;;
+;;;; This project is sponsored by the Office of Naval Research, One
+;;;; Liberty Center, 875 N. Randolph Street, Arlington, VA 22203 under
+;;;; contract # N68335-17-C-0700.  The content of the information does
+;;;; not necessarily reflect the position or policy of the Government
+;;;; and no official endorsement should be inferred.
+;;;;
+;;;;
+;;;; Functions for working with file and directories.  Includes
+;;;; functions for efficient serialization to/from files as well as
+;;;; functions for creating and using temporary files and directories.
+;;;;
 (uiop/package:define-package :gt/filesystem
   (:use-reexport :uiop/filesystem :uiop/pathname)
   (:use :common-lisp :alexandria :serapeum :iterate)

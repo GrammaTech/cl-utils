@@ -1,14 +1,26 @@
-;;;; Shell and system command helpers
-;;;
-;;; Wrappers for evaluating shell commands and returning the STDOUT,
-;;; STDERR, and ERRNO as values.  Includes the special `*shell-debug*'
-;;; variable which may be set to non-nil to dump all system and shell
-;;; executions and results for diagnostics.
-;;;
-;;; The `write-shell', `read-shell', `write-shell-file',
-;;; `read-shell-file' and `xz-pipe' functions provide for running
-;;; shell commands and common lisp streams (in some cases flowing from
-;;; or into files on disk).
+;;;; shell.lisp --- Shell and system command helpers
+;;;;
+;;;; Copyright (C) 2020 GrammaTech, Inc.
+;;;;
+;;;; This code is licensed under the MIT license. See the LICENSE.txt
+;;;; file in the project root for license terms.
+;;;;
+;;;; This project is sponsored by the Office of Naval Research, One
+;;;; Liberty Center, 875 N. Randolph Street, Arlington, VA 22203 under
+;;;; contract # N68335-17-C-0700.  The content of the information does
+;;;; not necessarily reflect the position or policy of the Government
+;;;; and no official endorsement should be inferred.
+;;;;
+;;;;
+;;;; Wrappers for evaluating shell commands and returning the STDOUT,
+;;;; STDERR, and ERRNO as values.  Includes the special `*shell-debug*'
+;;;; variable which may be set to non-nil to dump all system and shell
+;;;; executions and results for diagnostics.
+;;;;
+;;;; The `write-shell', `read-shell', `write-shell-file',
+;;;; `read-shell-file' and `xz-pipe' functions provide for running
+;;;; shell commands and common lisp streams (in some cases flowing from
+;;;; or into files on disk).
 (uiop/package:define-package :gt/shell
     (:use-reexport :uiop/launch-program)
   (:use :common-lisp :alexandria :iterate :gt/misc :arrow-macros
