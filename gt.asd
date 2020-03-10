@@ -6,7 +6,7 @@
   :class :package-inferred-system
   :defsystem-depends-on (:asdf-package-system)
   :depends-on (:gt/gt)
-  :in-order-to ((test-op (test-op "gtirb/test"))))
+  :in-order-to ((test-op (test-op "gt/test"))))
 
 (defsystem "gt/test"
     :author "GrammaTech"
