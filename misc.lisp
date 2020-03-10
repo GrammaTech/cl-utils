@@ -36,11 +36,6 @@
            :multiple-value-or
            :symbol-cat
            :symbol-cat-in-package
-           ;; trees
-           :mapt
-           :tree-right-length
-           :tree-right-walk
-           :filter-subtrees
            ;; plists
            :plist-get
            :plist-drop-if
@@ -73,8 +68,6 @@
            ;; lists
            :repeatedly
            :indexed
-           :equal-it
-           :different-it
            :transpose
            :interleave
            :drop-until
@@ -199,43 +192,6 @@ value, we return the values returned by the last form."
   "Return a symbol concatenation of SYMBOLS in PACKAGE."
   (intern (string-upcase (mapconcat #'symbol-name symbols "-"))
           package))
-
-
-;;;; Tree-related functions
-(defun tree-right-length (tree &aux (size 1))
-  "Return the length of the right spine of TREE."
-  (declare (optimize speed))
-  (iter (while (consp tree))
-        (setf tree (cdr tree))
-        (incf (the fixnum size)))
-  (the fixnum size))
-
-(defun tree-right-walk (tree)
-  "Return the right spine of TREE as a list."
-  (declare (optimize speed))
-  (if tree
-      (if (consp tree)
-          (cons (car tree) (tree-right-walk (cdr tree)))
-          (list tree))
-      nil))
-
-(defun mapt (function tree)
-  "Like `mapcar' but TREE is a cons tree instead of a proper list."
-  (if (consp tree)
-      (cons (mapt function (car tree))
-            (mapt function (cdr tree)))
-      (funcall function tree)))
-
-(defgeneric filter-subtrees (predicate tree)
-  (:documentation "Return a list of subtrees of TREE satisfying PREDICATE.")
-  (:method filter-subtrees (predicate (tree list))
-    (when (and tree (listp tree))
-      (append
-       (when (funcall predicate tree) (list tree))
-       (when (listp (car tree))
-         (filter-subtrees predicate (car tree)))
-       (when (listp (cdr tree))
-         (filter-subtrees predicate (cdr tree)))))))
 
 
 ;;;; plist functions
@@ -480,66 +436,6 @@ occurences of the part is replaced with replacement."))
 
 (defun indexed (list)
   (loop :for element :in list :as i :from 0 :collect (list i element)))
-
-(defun equal-it (obj1 obj2 &optional trace inhibit-slots)
-  "Equal over objects and lists."
-  (let ((trace1 (concatenate 'list (list obj1 obj2) trace)))
-    (cond
-      ((or (member obj1 trace) (member obj2 trace)) t)
-      ((and (listp obj1) (not (listp (cdr obj1)))
-            (listp obj2) (not (listp (cdr obj2))))
-       (and (equal-it (car obj1) (car obj2))
-            (equal-it (cdr obj1) (cdr obj2))))
-      ((or (and (listp obj1) (listp obj2)) (and (vectorp obj1) (vectorp obj2)))
-       (and (equal (length obj1) (length obj2))
-            (reduce (lambda (acc pair)
-                      (and acc (equal-it (car pair) (cdr pair) trace1)))
-                    (if (vectorp obj1)
-                        (mapcar #'cons (coerce obj1 'list) (coerce obj2 'list))
-                        (mapcar #'cons obj1 obj2))
-                    :initial-value t)))
-      ((class-slots (class-of obj1))
-       (reduce
-        (lambda (acc slot)
-          (and acc (equal-it (slot-value obj1 slot) (slot-value obj2 slot)
-                             trace1)))
-        (remove-if [{member _ inhibit-slots :test #'string= :key #'symbol-name}
-                    #'symbol-name]
-                   (mapcar #'slot-definition-name
-                           (class-slots (class-of obj1))))
-        :initial-value t))
-      (t (equal obj1 obj2)))))
-
-(defun different-it (obj1 obj2 &optional trace)
-  (let ((trace1 (concatenate 'list (list obj1 obj2) trace)))
-    (cond
-      ((or (member obj1 trace) (member obj2 trace)) t)
-      ((or (and (vectorp obj1) (vectorp obj2))
-           (and (proper-list-p obj1) (proper-list-p obj2)))
-       (and (or (equal (length obj1) (length obj2))
-                (format t "~&different lengths ~a!=~a"
-                        (length obj1) (length obj2)))
-            (reduce (lambda-bind (acc (i (a b)))
-                      (and acc (or (different-it a b trace1)
-                                   (format t "~& at ~d ~a!=~a" i a b))))
-                    (indexed
-                     (if (vectorp obj1)
-                         (mapcar #'list (coerce obj1 'list) (coerce obj2 'list))
-                         (mapcar #'list obj1 obj2)))
-                    :initial-value t)))
-      ((and (consp obj1) (consp obj2))
-       (and (different-it (car obj1) (car obj2))
-            (different-it (cdr obj1) (cdr obj2))))
-      ((class-slots (class-of obj1))
-       (reduce (lambda (acc slot)
-                 (and acc (or (different-it
-                               (slot-value obj1 slot) (slot-value obj2 slot)
-                               trace1)
-                              (format t "~&  ~a" slot))))
-               (mapcar #'slot-definition-name
-                       (class-slots (class-of obj1)))
-               :initial-value t))
-      (t (or (equal obj1 obj2) (format t "~&~a!=~a" obj1 obj2))))))
 
 (defun transpose (matrix)
   "Simple matrix transposition."
