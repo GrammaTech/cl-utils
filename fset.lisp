@@ -13,8 +13,9 @@
 (uiop/package:define-package :gt/fset
   (:import-from :cl :defgeneric :defmethod :&key :&optional)
   (:import-from :fset :collection)
+  (:import-from :alexandria)
   (:shadow :last :union :intersection :set-difference)
-  (:export :last :union :intersection :set-difference))
+  (:export :last :lastcar :union :intersection :set-difference))
 (in-package :gt/fset)
 
 (defgeneric last (collection &optional n)
@@ -24,6 +25,13 @@
   (:method ((collection collection) &optional (n 1)
             &aux (len (fset:size collection)))
     (fset:subseq collection (if (<= len n) 0 (- len n)))))
+
+(defgeneric lastcar (collection)
+  (:documentation #.(documentation 'alexandria:lastcar 'function))
+  (:method ((collection cons))
+    (cl:car (last collection)))
+  (:method ((collection collection))
+    (fset:first (last collection))))
 
 (defgeneric union (collection-1 collection-2 &key key test test-not)
   (:documentation #.(documentation 'cl:union 'function))

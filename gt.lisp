@@ -54,7 +54,7 @@
                           ;; Shadowed sequence operations from serapeum.
                           :concat :range :partition :filter)
   (:shadowing-import-from :gt/fset
-                          :last
+                          :last :lastcar
                           :union :intersection :set-difference)
   (:shadowing-import-from :cl-ppcre
                           :scan)        ; Shadow serapeum:scan.
