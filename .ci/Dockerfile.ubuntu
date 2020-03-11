@@ -1,12 +1,36 @@
 ARG LISP
-FROM docker.grammatech.com/synthesis/cl
+FROM ubuntu:16.04
 
-# Use /root/quicklisp/local-projects.
-RUN cp -R /usr/synth/quicklisp /root/quicklisp
-COPY . /root/quicklisp/local-projects/gt
-WORKDIR /root/quicklisp/local-projects/gt
+RUN apt-get -y update && \
+    apt-get -y install autoconf build-essential git wget && \
+    apt-get -y install sbcl
+
+# Install quicklisp
+RUN cd /tmp/ && \
+    wget https://beta.quicklisp.org/quicklisp.lisp && \
+    sbcl --load quicklisp.lisp \
+         --eval '(quicklisp-quickstart:install)'
+
+# Install CCL
+RUN echo '#!/bin/sh\n\
+export CCL_DEFAULT_DIRECTORY=/usr/lib/ccl\n\
+exec ${CCL_DEFAULT_DIRECTORY}/lx86cl64 "$@"\n\
+' > /usr/bin/ccl && \
+    chmod a+x /usr/bin/ccl && \
+    mkdir -p /usr/lib/ccl && \
+    cd /tmp && \
+    git clone https://github.com/Clozure/ccl.git && \
+    cd ccl && \
+    git reset --hard 752ca841103f2ad35d2df99a069d38a25a85b729 && \
+    wget https://github.com/Clozure/ccl/releases/download/v1.12-dev.1/linuxx86.tar.gz && \
+    tar xzvf linuxx86.tar.gz -C . && \
+    echo "(ccl:rebuild-ccl :full t)" | ./lx86cl64 --no-init --quiet --batch; \
+    cp -pr /tmp/ccl/* /usr/lib/ccl && \
+    rm -rf /tmp/ccl
+
+COPY . /root/quicklisp/local-projects/functional-trees
+WORKDIR /root/quicklisp/local-projects/functional-trees
 ENV LISP=$LISP \
     QUICK_LISP=/root/quicklisp/ \
-    SBCL_HOME=/usr/synth/lib/sbcl \
     LISP_STACK=32678
 CMD /bin/bash

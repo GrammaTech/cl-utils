@@ -2,107 +2,48 @@ variables:
   DOCKER_REGISTRY: "docker.grammatech.com"
   LOCAL_IMAGE_NAME: '$CI_PROJECT_PATH-$CI_BUILD_REF_NAME-$CI_PIPELINE_ID'
 
-before_script:
-  - docker info
-
 stages:
-  - build
-  - test-and-tag
+  - build-and-test
   - dependents
-  - cleanup
 
 .build-template: &build
   script:
-    - if [ "$OS" = "ubuntu" ];
-      then
-          export PULL_TAG=latest;
-      else
-          export PULL_TAG=${OS};
-      fi
-    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $DOCKER_REGISTRY
-    - docker pull $DOCKER_REGISTRY/synthesis/cl:${PULL_TAG}
-    - docker build --build-arg=GT=yes  --build-arg=LISP=${LISP} -f .ci/Dockerfile.${OS} -t ${LOCAL_IMAGE_NAME}-${OS}-${LISP} .
+    - docker build --build-arg=LISP=${LISP} -f .ci/Dockerfile.${OS} -t ${LOCAL_IMAGE_NAME}-${OS}-${LISP} .
+    - docker run -e LISP=${LISP} ${LOCAL_IMAGE_NAME}-${OS}-${LISP} /bin/bash -c "make check";
+  after_script:
+    - docker rmi -f ${LOCAL_IMAGE_NAME}-${OS}-${LISP}
 
-build-ubuntu-ccl:
-  stage: build
+build-and-test-ubuntu-ccl:
+  stage: build-and-test
   variables:
     OS: 'ubuntu'
     LISP: 'ccl'
   <<: *build
 
-build-ubuntu-sbcl:
-  stage: build
+build-and-test-ubuntu-sbcl:
+  stage: build-and-test
   variables:
     OS: 'ubuntu'
     LISP: 'sbcl'
   <<: *build
 
-build-arch-ccl:
-  stage: build
+build-and-test-arch-ccl:
+  stage: build-and-test
   variables:
     OS: 'arch'
     LISP: 'ccl'
   <<: *build
 
-build-arch-sbcl:
-  stage: build
+build-and-test-arch-sbcl:
+  stage: build-and-test
   variables:
     OS: 'arch'
     LISP: 'sbcl'
   <<: *build
 
-.run-template: &run
-  script:
-    # If on master branch, push test results to DataManager; otherwise, run locally.
-    - if [ "$CI_BUILD_REF_NAME" = "master" ];
-      then
-          docker run -e LOCAL_USER=root -e GT=yes -e REPORT=yes -e LISP=${LISP} ${LOCAL_IMAGE_NAME}-${OS}-${LISP} /bin/bash -c "cd /root/quicklisp/local-projects/gt && make check";
-      else
-          docker run -e LOCAL_USER=root -e GT=yes -e LISP=${LISP} ${LOCAL_IMAGE_NAME}-${OS}-${LISP} /bin/bash -c "cd /root/quicklisp/local-projects/gt && make check";
-      fi
-
-run-ubuntu-ccl:
-  stage: test-and-tag
-  variables:
-    OS: 'ubuntu'
-    LISP: 'ccl'
-  <<: *run
-
-run-ubuntu-sbcl:
-  stage: test-and-tag
-  variables:
-    OS: 'ubuntu'
-    LISP: 'sbcl'
-  <<: *run
-
-run-arch-ccl:
-  stage: test-and-tag
-  variables:
-    OS: 'arch'
-    LISP: 'ccl'
-  <<: *run
-
-run-arch-sbcl:
-  stage: test-and-tag
-  variables:
-    OS: 'arch'
-    LISP: 'sbcl'
-  <<: *run
-
-trigger_sel:
+trigger_gt:
   stage: dependents
   script:
-    - "curl -X POST -F token=1a461b5961e7d178128c559ff81cdd -F ref=$CI_BUILD_REF_NAME https://git.grammatech.com/api/v4/projects/195/trigger/pipeline"
+    - "curl -X POST -F token=064aa88b0cae92c6b22885598f3ccf -F ref=$CI_BUILD_REF_NAME https://git.grammatech.com/api/v4/projects/1312/trigger/pipeline"
   only:
     - master
-
-cleanup:
-  stage: cleanup
-  script:
-    - date
-  after_script:
-    - docker rmi -f ${LOCAL_IMAGE_NAME}-arch-ccl
-    - docker rmi -f ${LOCAL_IMAGE_NAME}-arch-sbcl
-    - docker rmi -f ${LOCAL_IMAGE_NAME}-ubuntu-sbcl
-    - docker rmi -f ${LOCAL_IMAGE_NAME}-ubuntu-ccl
-  when: always
