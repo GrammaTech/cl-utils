@@ -19,6 +19,7 @@
                  :named-readtables :curry-compose-reader-macros)
   (:shadow :mapconcat :~> :~~>)  ; Shadow serapeum arrows & mapconcat.
   (:shadow :lines)                      ; We wrap in a defgeneric.
+  (:shadow :exe)                        ; This isn't generically useful.
   (:shadowing-import-from :common-lisp
                           :map)         ; Shadow fset:map.
   (:shadowing-import-from :serapeum
