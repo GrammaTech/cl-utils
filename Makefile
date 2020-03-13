@@ -7,4 +7,4 @@ PACKAGE_NAME = gt
 
 LISP_DEPS = $(wildcard *.lisp)
 
-include cl.mk
+include .cl-make/cl.mk
