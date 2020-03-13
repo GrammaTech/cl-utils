@@ -20,6 +20,8 @@
 
 (defgeneric last (collection &optional n)
   (:documentation #.(documentation 'cl:last 'function))
+  (:method ((collection null) &optional (n 1))
+    (declare (ignorable collection n)) nil)
   (:method ((collection cons) &optional (n 1))
     (cl:last collection n))
   (:method ((collection collection) &optional (n 1)
@@ -28,6 +30,8 @@
 
 (defgeneric lastcar (collection)
   (:documentation #.(documentation 'alexandria:lastcar 'function))
+  (:method ((collection null))
+    (declare (ignorable collection)) nil)
   (:method ((collection cons))
     (cl:car (last collection)))
   (:method ((collection collection))
