@@ -1,4 +1,4 @@
-;;;; full.lisp --- generic forensic functions over arbitrary objects
+;;;; misc.lisp --- miscellaneous utility functions
 ;;;;
 ;;;; Copyright (C) 2020 GrammaTech, Inc.
 ;;;;
