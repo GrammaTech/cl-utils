@@ -19,6 +19,7 @@
         :curry-compose-reader-macros)
   (:import-from :serapeum :mapconcat :drop-while :take-while :plist-keys)
   (:import-from :uiop/utility :with-muffled-conditions)
+  (:import-from :uiop/image :quit :*lisp-interaction*)
   #+sbcl
   (:import-from :sb-introspect :function-lambda-list)
   (:shadowing-import-from
@@ -83,7 +84,10 @@
            :mapcar-improper-list
            ;; hash tables
            :make-thread-safe-hash-table
-           :random-hash-table-key))
+           :random-hash-table-key
+           ;; lisp image
+           :quit
+           :*lisp-interaction*))
 (in-package :gt/misc)
 (in-readtable :curry-compose-reader-macros)
 
