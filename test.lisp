@@ -54,7 +54,7 @@
 (in-suite test)
 
 (deftest file-to-string-empty-file ()
-  (with-temp-file-of (tmp) ""
+  (with-temporary-file-of (:pathname tmp) ""
     (is (equal "" (file-to-string tmp)))))
 
 (deftest file-to-string-non-utf8-encoding ()
@@ -96,7 +96,7 @@
   (let ((test-string "Hello world. Hello world. Hello world."))
     (is (string= test-string
                  (handler-case
-                     (with-temp-file (temp.xz)
+                     (with-temporary-file (:pathname temp.xz)
                        (write-shell-file (out temp.xz "xz")
                                          (write-line test-string out))
                        ;; NOTE: sleep one second to account for rare stochastic
@@ -112,7 +112,7 @@
   (let ((byte #x25))
     (is (equal byte
                (handler-case
-                   (with-temp-file (temp.xz)
+                   (with-temporary-file (:pathname temp.xz)
                      (write-shell-file (out temp.xz "xz")
                                        (write-byte byte out))
                      ;; NOTE: sleep one second to account for rare stochastic

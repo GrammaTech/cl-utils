@@ -154,8 +154,8 @@ Optionally print debug information if `*shell-debug*' is non-nil."
 
       #+(and ccl (not windows))
       (progn
-        (with-temp-file (stdout-file)
-          (with-temp-file (stderr-file)
+        (with-temporary-file (:pathname stdout-file)
+          (with-temporary-file (:pathname stderr-file)
             (loop :for i :from 0 :to 5
                   :until (setf errno
                                (nth-value 2 (apply #'run-program

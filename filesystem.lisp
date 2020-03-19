@@ -43,11 +43,11 @@
    :file-access-operation
    ;; Temporary files
    :*temp-dir*
-   :with-temp-file
-   :with-temp-file-of
-   :with-temp-dir
-   :with-temp-dir-of
-   :with-temp-fifo
+   :with-temporary-file
+   :with-temporary-file-of
+   :with-temporary-directory
+   :with-temporary-directory-of
+   :with-temporary-fifo
    :temp-file-name
    :delete-path
    ;; cl-fad
@@ -194,64 +194,90 @@ USE-ENCODING. "
 (defvar *temp-dir* (namestring (default-temporary-directory))
   "Set to non-nil for a custom temporary directory.")
 
-(defmacro with-temp-file (spec &rest body)
-  "SPEC holds the variable used to reference the file w/optional extension.
-After BODY is executed the temporary file is removed."
-  (with-gensyms (v)
-    `(let* ((,v ,(second spec))
-            (,(car spec) (temp-file-name ,v)))
-       (unwind-protect (progn ,@body) (delete-path ,(car spec))))))
+(defmacro with-temporary-file ((&key (stream (gensym "STREAM") streamp)
+                                  (pathname (gensym "PATHNAME") pathnamep)
+                                  (directory *temp-dir*) prefix suffix type
+                                  keep direction element-type external-format)
+                               &body body)
+  "Evaluate BODY where the symbol specified by the keyword argument PATHNAME
+is bound to a newly created temporary file.
 
-(defmacro with-temp-file-of ((variable &optional type) string &rest body)
-  "Execute BODY with STRING in a temporary file whose path is in VARIABLE."
-  `(let ((,variable (temp-file-name ,type)))
-     (unwind-protect (progn (string-to-file ,string ,variable) ,@body)
-       (when (probe-file ,variable) (delete-file ,variable)))))
+* PATHNAME Symbol to be bound to a newly created temporary file.
+* DIRECTORY Directory where the temporary file is to be created.
+* TYPE Extension of the temporary file.
 
-(defmacro with-temp-dir (spec &rest body)
-  "Execute BODY with a temporary directory.
-The first form passed to `with-temp-dir' is passed through
-to `with-temp-file' to create path to the temporary directory."
-  `(with-temp-file ,spec
-     (setf ,(car spec) (namestring (ensure-directory-pathname ,(car spec))))
-     (ensure-directories-exist ,(car spec))
+All other keyword arguments are currently unimplemented and exist
+for compatability purposes with `uiop/stream:with-temporary-file`."
+  (declare (ignorable stream prefix suffix keep direction
+                      element-type external-format))
+  (assert pathnamep (pathname)
+          "pathname must be given to `with-temporary-file'")
+  (assert (not streamp) (stream)
+          "stream not implemented for `with-temporary-file'")
+  `(let* ((,pathname (temp-file-name :directory ,directory :type ,type)))
+     (unwind-protect (progn ,@body) (delete-path ,pathname))))
+
+(defmacro with-temporary-file-of
+    ((&rest args &key (pathname (gensym "PATHNAME")) &allow-other-keys)
+     string &body body)
+  "Execute BODY with STRING in a temporary file whose path is
+bound to PATHNAME.  Additional keyword args are passed thru to
+`with-temporary-file`."
+  `(with-temporary-file (,@args)
+     (when ,pathname (string-to-file ,string ,pathname))
      ,@body))
 
-(defmacro with-temp-dir-of (spec dir &rest body)
-  "Populate SPEC with the path to a temporary directory with the contents
-of DIR and execute BODY"
-  `(with-temp-dir ,spec
+(defmacro with-temporary-fifo
+    ((&rest args &key (pathname (gensym "PATHNAME")) &allow-other-keys)
+     &body body)
+  "Execute BODY with a temporary fifo whose path is bound to PATHNAME.
+Additional keyword args are passed thru to `with-temporary-file`."
+  `(with-temporary-file (,@args)
+     (delete-path ,pathname)
+     #-windows (osicat-posix:mkfifo ,pathname (logior osicat-posix:s-iwusr
+                                                      osicat-posix:s-irusr))
+     ,@body))
+
+(defmacro with-temporary-directory
+    ((&rest args &key (pathname (gensym "PATHNAME")) &allow-other-keys)
+     &body body)
+  "Execute BODY with a temporary directory whose path is bound to PATHNAME.
+Additional keyword arguments behave correspondingly to those in
+`with-temporary-file`."
+  `(with-temporary-file (:pathname ,pathname ,@args)
+     (delete-path ,pathname)
+     (setf ,pathname (namestring (ensure-directory-pathname ,pathname)))
+     (ensure-directories-exist ,pathname)
+     ,@body))
+
+(defmacro with-temporary-directory-of
+    ((&rest args &key (pathname (gensym "PATHNAME")) &allow-other-keys)
+     dir &body body)
+  "Execute BODY with a temporary directory with the contents of DIR
+whose path is bound to PATHNAME.  Additional keyword arguments behave
+correspondingly to those in `with-temporary-file`."
+  `(with-temporary-directory (:pathname ,pathname ,@args)
      (run-program (format nil "cp -pr ~a/. ~a"
                               (namestring ,dir)
-                              (namestring ,(car spec))))
+                              (namestring ,pathname)))
      ,@body))
 
-(defmacro with-temp-fifo (spec &rest body)
-  "Execute BODY with a temporary fifo.
-The first form passed to `with-temporary-fifo' is passed through to
-`with-temp-file' to create path to the temporary fifo."
-  `(with-temp-file ,spec
-     (delete-path ,(car spec))
-     #-windows (osicat-posix:mkfifo ,(car spec) (logior osicat-posix:s-iwusr
-                                                        osicat-posix:s-irusr))
-     ,@body))
-
-(defun temp-file-name (&optional type)
+(defun temp-file-name (&key (directory *temp-dir*) type)
   (let ((base
           #+clisp
           (let ((stream (gensym)))
             (eval `(with-open-stream
                        (,stream (ext:mkstemp
-                                 (if *temp-dir*
+                                 (if directory
                                      (namestring (make-pathname
-                                                  :directory *temp-dir*
+                                                  :directory directory
                                                   :name "XXXXXX"))
                                      nil)))
                      (namestring (pathname ,stream)))))
           #+(or sbcl ccl ecl)
-          (tempnam *temp-dir* nil)
+          (tempnam directory nil)
           #+allegro
-          (system:make-temp-file-name nil *temp-dir*)
+          (system:make-temp-file-name nil directory)
           #-(or sbcl clisp ccl allegro ecl)
           (error "no temporary file backend for this lisp.")))
     (concatenate 'string base "." (or type ""))))
