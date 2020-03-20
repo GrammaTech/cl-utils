@@ -202,14 +202,18 @@ value, we return the values returned by the last form."
 
 ;;;; plist functions
 (defun plist-get (item list &key (test #'eql))
-  (loop for (element val) on list by #'cddr
+  (declare (optimize (speed 3)))
+  (loop for (element . rest) on list by #'cddr
+     unless (consp rest) do (error "Not a valid plist: ~a" list)
      when (funcall test item element)
-     return val))
+     return (car rest)))
 
 (defun plist-drop-if (predicate list &aux last)
-  (loop for (element val) on list by #'cddr
+  (declare (optimize (speed 3)))
+  (loop for (element . rest) on list by #'cddr
+     unless (consp rest) do (error "Not a valid plist: ~a" list)
      unless (funcall predicate element)
-     nconc (list element val)))
+     nconc (list element (car rest))))
 
 (defun plist-drop (item list &key (test #'eql))
   (plist-drop-if {funcall test item} list))
