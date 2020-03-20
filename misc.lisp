@@ -160,20 +160,22 @@ is evaluated.  If all INITIAL-FORMs evaluate to true, then THEN-BODY
 is executed."
   ;; NOTE: Largely adapted form Alexandria's `when-let*'.
   (with-gensyms  (if-block)
-    (let ((binding-list (if (and (consp bindings) (symbolp (car bindings)))
-                            (list bindings)
-                            bindings)))
-      (labels ((bind (bindings body)
-                 (if bindings
-                     `((let (,(car bindings))
-                         (when ,(caar bindings)
-                           ,@(bind (cdr bindings) body))))
-                     `((return-from ,if-block ,body)))))
-        `(block ,if-block
-           (let (,(car binding-list))
-             (when ,(caar binding-list)
-               ,@(bind (cdr binding-list) then-form)))
-           ,else-form)))))
+    (if (null bindings)
+        then-form
+        (let ((binding-list (if (and (consp bindings) (symbolp (car bindings)))
+                                (list bindings)
+                                bindings)))
+          (labels ((bind (bindings body)
+                     (if bindings
+                         `((let (,(car bindings))
+                             (when ,(caar bindings)
+                               ,@(bind (cdr bindings) body))))
+                         `((return-from ,if-block ,body)))))
+            `(block ,if-block
+               (let (,(car binding-list))
+                 (when ,(caar binding-list)
+                   ,@(bind (cdr binding-list) then-form)))
+               ,else-form))))))
 
 (defmacro multiple-value-or (&body forms)
   "Evaluates FORM arguments one at time, until the first value returned
@@ -199,19 +201,15 @@ value, we return the values returned by the last form."
 
 
 ;;;; plist functions
-(defun plist-get (item list &key (test #'eql) &aux last)
-  (loop :for element :in list :do
-     (cond
-       (last (return element))
-       ((funcall test item element) (setf last t)))))
+(defun plist-get (item list &key (test #'eql))
+  (loop for (element val) on list by #'cddr
+     when (funcall test item element)
+     return val))
 
 (defun plist-drop-if (predicate list &aux last)
-  (nreverse (reduce (lambda (acc element)
-                      (cond
-                        (last (setf last nil) acc)
-                        ((funcall predicate element) (setf last t) acc)
-                        (t (cons element acc))))
-                    list :initial-value '())))
+  (loop for (element val) on list by #'cddr
+     unless (funcall predicate element)
+     nconc (list element val)))
 
 (defun plist-drop (item list &key (test #'eql))
   (plist-drop-if {funcall test item} list))
