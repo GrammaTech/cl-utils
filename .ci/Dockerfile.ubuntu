@@ -32,5 +32,5 @@ COPY . /root/quicklisp/local-projects/functional-trees
 WORKDIR /root/quicklisp/local-projects/functional-trees
 ENV LISP=$LISP \
     QUICK_LISP=/root/quicklisp/ \
-    LISP_STACK=32678
+    LISP_HEAP=32678
 CMD /bin/bash
