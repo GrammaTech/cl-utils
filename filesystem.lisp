@@ -387,7 +387,9 @@ directory pathname containing the logical concatenation of them all."
           :defaults defaults
           :directory (iter (for pathname in (rest pathnames))
                            (for directory = (pathname-directory pathname))
-                           (cond ((eq :absolute (first directory))
+                           (cond ((null dir)
+                                  (setf dir directory))
+                                 ((eq :absolute (first directory))
                                   (setf dir directory))
                                  ((eq :relative (first directory))
                                   (setf dir (append dir (rest directory)))))
