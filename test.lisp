@@ -55,13 +55,140 @@
 
 (deftest file-to-string-empty-file ()
   (with-temporary-file-of (:pathname tmp) ""
-    (is (equal "" (file-to-string tmp)))))
+                          (is (equal "" (file-to-string tmp)))
+                          (is (equal "" (file-to-string tmp :external-format :ascii)))))
 
 (deftest file-to-string-non-utf8-encoding ()
   #-ccl       ; CCL silently reads w/o warning despite bad encoding...
   (is (string= (file-to-string (make-pathname :directory +etc-dir+
                                               :defaults "latin-1.c"))
                "/* Here is a non-ASCII character: § */")))
+
+(deftest file-to-bytes-test ()
+  (with-temporary-file-of (:pathname tmp) ""
+                          (equalp (file-to-bytes tmp) #())))
+
+(deftest string-to-file-test ()
+  (with-temporary-file-of (:pathname tmp) ""
+                          (is (equal (namestring (string-to-file "foo" tmp)) tmp))
+                          (is (equal (file-to-string tmp) "foo"))))
+
+(deftest file-bytes-roundtrip-test ()
+  (is (null
+       (loop repeat 20
+          do (let* ((n (random 100))
+                    (bytes (coerce (loop repeat n collect (random 256))
+                                   '(vector (unsigned-byte 8)))))
+               (with-temporary-file-of
+                   (:pathname tmp) ""
+                   (bytes-to-file bytes tmp)
+                   (let ((seq (file-to-bytes tmp)))
+                     (unless (and (= (length bytes) (length seq))
+                                  (typep seq '(vector (unsigned-byte 8)))
+                                  (every #'= bytes seq))
+                       (return (list n bytes seq))))))))))
+
+(deftest canonical-pathname-test ()
+  (is (equal (namestring (canonical-pathname #p"")) ""))
+  (is (equal (canonical-pathname #p"foo/") #p"foo/")))
+
+(deftest merge-pathname-as-directory-test ()
+  (is (equal (merge-pathnames-as-directory) #p""))
+  (is (equal (merge-pathnames-as-directory #p"" #p"d1/" #p"")
+             #p"d1/"))
+  (is (equal (merge-pathnames-as-directory #p"d1/" #p"d2/")
+             #p"d1/d2/"))
+  (is (equal (merge-pathnames-as-directory #p"/d1/" #p"d2/")
+             #p"/d1/d2/"))
+  (is (equal (merge-pathnames-as-directory #p"d1/" #p"/d2/")
+             #p"/d2/")))
+
+(deftest merge-pathname-as-file-test ()
+  (is (equal (merge-pathnames-as-file) #p""))
+  (is (equal (merge-pathnames-as-file #p"f.txt") #p"f.txt"))
+  (is (equal (merge-pathnames-as-file #p"" #p"d1/" #p"f")
+             #p"d1/f"))
+  (is (equal (merge-pathnames-as-file #p"" #p"d1/" #p"f.txt")
+             #p"d1/f.txt"))
+  (is (equal (merge-pathnames-as-file #p"d1/g.c" #p"d2/h.cpp")
+             #p"d1/d2/h.cpp"))
+  (is (equal (merge-pathnames-as-file #p"/d1/" #p"d2/")
+             #p"/d1/d2/"))
+  (is (equal (merge-pathnames-as-file #p"d1/" #p"/d2/")
+             #p"/d2/"))
+  (is (equal (merge-pathnames-as-file #p"/d/"
+                                      (make-pathname :directory nil
+                                                     :name "f"
+                                                     :type "c"
+                                                     :version :newest))
+             (make-pathname :directory '(:absolute "d")
+                            :name "f"
+                            :type "c"
+                            :version :newest))))
+
+(deftest directory-wildcard-test ()
+  (is (handler-case (progn (directory-wildcard #p"*/") nil)
+        (error () t)))
+  #+sbcl
+  (is (equal (directory-wildcard "d/") #p"d/*.*")))
+
+(deftest list-directory-test ()
+  (is (handler-case (progn (list-directory #p"*/") nil)
+        (error () t)))
+  (with-temporary-directory (:pathname d)
+    (let ((f (merge-pathnames-as-file d "f.txt")))
+      (string-to-file "" f)
+      (is (equal (list-directory d) (list f))))))
+
+(deftest walk-directory-test ()
+  (is (handler-case (progn (walk-directory #p"*/" (constantly nil)) nil)
+        (error () t)))
+  (is (handler-case (progn (walk-directory #p"/" (constantly nil)
+                                           :if-does-not-exist :bogus))
+        (error () t)))
+  (is (handler-case (walk-directory #p"nonexistent/" (constantly nil))
+        (error () t)))
+  (is (null (multiple-value-list
+             (walk-directory "nonexistent/" (constantly nil)
+                             :if-does-not-exist :ignore))))
+  (with-temporary-directory (:pathname d)
+    (let ((f (merge-pathnames-as-file d "f.txt")))
+      (string-to-file "" f)
+      (is (null (multiple-value-list
+                 (walk-directory d (constantly nil)))))
+      (is (null (multiple-value-list
+                 (walk-directory d (constantly nil)
+                                 :if-does-not-exist :ignore))))
+      (is (eql (let ((count 0))
+                 (walk-directory d (lambda (x) (incf count)))
+                 count)
+               1))
+      (is (eql (let ((count 0))
+                 (walk-directory d (lambda (x) (incf count))
+                                 :directories :breadth-first)
+                 count)
+               2))
+      (is (eql (let ((count 0))
+                 (walk-directory d (lambda (x) (incf count))
+                                 :directories :breadth-first
+                                 :test (constantly nil))
+                 count)
+               0))
+      (is (eql (let ((count 0))
+                 (walk-directory d (lambda (x) (incf count))
+                                 :directories :depth-first
+                                 :test (constantly nil))
+                 count)
+               0))
+      (is (eql (let ((count 0))
+                 (walk-directory d (lambda (x) (incf count))
+                                 :test (constantly nil))
+                 count)
+               0))
+      (is (eql (let ((count 0))
+                 (walk-directory d (lambda (x) (incf count)) :directories t)
+                 count)
+               2)))))
 
 (deftest which-test ()
   (is (null (which "dsjafpoarue")))
@@ -123,6 +250,68 @@
                                       (read-byte in)))
                  (error (c) (declare (ignorable c)) nil))))))
 
+#-windows
+(deftest shell-input-test ()
+  (is (equal (multiple-value-list (shell "cat" :input "foo"))
+             '("foo" "" 0)))
+  (is (equal
+       (multiple-value-list
+        (with-input-from-string (s "bar")
+          (shell "cat" :input s)))
+       '("bar" "" 0))))
+
+#-windows
+(deftest shell-bash-test ()
+  (is (equal (multiple-value-list (shell "echo" :bash t))
+             (list (string #\Newline) "" 0)))
+  (is (equal (multiple-value-list (shell "cat" :bash t :input "x"))
+             '("x" "" 0))))
+
+#-windows
+(deftest shell-debug-test ()
+  (flet ((%r (s)
+           (let ((pos (position #\Newline s)))
+             (if pos (subseq s 0 pos) pos))))
+    (is (equal
+         (let ((gt/shell::*shell-debug* t))
+           (%r (with-output-to-string (*standard-output*)
+                 (shell "echo"))))
+         "  cmd: echo"))
+    (is (equal
+         (let ((gt/shell::*shell-debug* t))
+           (%r (with-output-to-string (*standard-output*)
+                 (shell "echo" :input "foo"))))
+         "  cmd: echo"))
+    (is (equal
+         (let ((gt/shell::*shell-debug* '(:cmd)))
+           (%r (with-output-to-string (*standard-output*)
+                 (shell "echo"))))
+         "  cmd: echo"))
+    (let ((gt/shell::*shell-debug* '(:input)))
+      (is (search "  input:"
+                  (with-output-to-string (*standard-output*)
+                    (shell "echo" :input "bar")))))))
+
+#-windows
+(deftest shell-error-test ()
+  (is (equal (multiple-value-list (shell "exit 1")) '("" "" 1)))
+  (let ((gt/shell::*shell-non-error-codes* '(2)))
+    (is (equal (multiple-value-list (shell "exit 2")) '("" "" 2))))
+  (handler-case (shell "exit 3")
+    (shell-command-failed (e)
+      (is (equal (gt/shell::command e) "exit 3"))
+      (is (equal (gt/shell::exit-code e) 126))
+      (is (equal (gt/shell::stderr e) ""))))
+  (handler-case (shell "exit 126")
+    (shell-command-failed (e)
+      (is (equal (gt/shell::command e) "exit 126"))
+      (is (equal (gt/shell::exit-code e) 126))
+      (is (equal (gt/shell::stderr e) ""))))
+  (is
+   (equal (multiple-value-list
+           (handler-case (shell "exit 3")
+             (shell-command-failed () (invoke-restart 'gt/shell::ignore-shell-error nil))))
+          '("" "" 3))))
 
 (deftest pad-list-expand-to-requisite-length ()
   (is (equal '(1 2 3 3) (pad '(1 2) 4 3))))
@@ -222,13 +411,19 @@
   (is (equal (plist-merge nil '(:a 1)) '(:a 1)))
   (is (equal (plist-merge '(:a 1) '(:b 2)) '(:a 1 :b 2)))
   (is (equal (plist-merge '(:a 1) '(:a 2)) '(:a 1))))
-  
+
 (deftest aget-test ()
   (is (equal (aget :a nil) nil))
   (is (equal (aget 1 nil) nil))
   (is (equal (aget :a '((:a . 1))) 1))
   (is (equal (aget :a '((:b . 1) (:a . 2) (:a . 3))) 2))
   (is (equal (aget :a '((:a . 1) (:b . 2)) :test (complement #'eql)) 2))
+
+  (is (equal (eval '(aget :a nil)) nil))
+  (is (equal (eval '(aget :a '((:a . 1)))) 1))
+  (is (equal (eval '(aget :a '((:b . 1)) :test (complement #'eql))) 1))
+  (is (equal (eval '(let ((x :a)) (aget x '((:a . 1))))) 1))
+
   (locally (declare (notinline aget)) ;; disable compiler macro for aget
     (is (equal (aget :a nil) nil))
     (is (equal (aget 1 nil) nil))
@@ -239,7 +434,9 @@
 (deftest aget-setf-test ()
   (let (x)
     (is (equal (setf (aget :a x) 1) 1))
-    (is (equal x '((:a . 1))))))
+    (is (equal x '((:a . 1)))))
+  (is (equal (eval '(let (x) (setf (aget :a x) 1))) 1))
+  (is (equal (eval '(let (x) (setf (aget :a x) 1) x)) '((:a . 1)))))
 
 (deftest areplace-test ()
   (let ((x (list (cons :a 1) (cons :b 2) (cons :c 3))))
@@ -305,7 +502,7 @@
     (%t "xxx" "x" "y" "yyy")
     (%t "xxx" "xx" "y" "yx")
     (%t "XXX" "xx" "y" "yX" #'char-equal)))
-  
+
 (deftest apply-replacements-test ()
   (is (equal (apply-replacements nil "") ""))
   (is (equal (apply-replacements nil "x") "x"))
@@ -363,12 +560,12 @@
   (is (equal (levenshtein-distance "xab" "aby") 2))
   (is (equal (levenshtein-distance "abx" "yab") 2)))
 
-(defun tails-test ()
+(deftest tails-test ()
   (is (equal (tails nil) nil))
   (is (equal (tails '(:a)) '((:a))))
   (is (equal (tails '(:a :b :c)) '((:a :b :c) (:b :c) (:c)))))
 
-(defun pairs-test ()
+(deftest pairs-test ()
   (is (equal (pairs nil) nil))
   (is (equal (pairs '(:a)) nil))
   (is (equal (pairs '(:a :b :c)) '((:a . :b) (:a . :c) (:b . :c)))))
@@ -378,3 +575,44 @@
   (is (equal (mapcar-improper-list #'1+ 1) 2))
   (is (equal (mapcar-improper-list #'1+ '(1)) '(2)))
   (is (equal (mapcar-improper-list #'1+ '(1 . 3)) '(2 . 4))))
+
+(deftest split-quoted-test ()
+  (is (equal (split-quoted "") nil))
+  (is (equal (split-quoted "a b") '("a" "b")))
+  (is (equal (split-quoted "a\\ b") '("a\\ b")))
+  (is (equal (split-quoted "\"a b\"") '("\"a b\"")))
+  (is (equal (split-quoted "a ' ' b") '("a" "' '" "b"))))
+
+(deftest escape-string-test ()
+  (is (equal (escape-string "") ""))
+  (is (equal (escape-string "x") "x")))
+
+(deftest unescape-string-test ()
+  (is (equal (unescape-string "") ""))
+  (is (equal (unescape-string "x") "x")))
+
+(deftest escape-chars-test ()
+  (is (equal (escape-chars "" "") ""))
+  (is (equal (escape-chars "" "\\") "\\"))
+  (is (equal (escape-chars "y" "xyz") "x\\yz")))
+
+(deftest make-thread-safe-hash-table-test ()
+  (let ((h (make-thread-safe-hash-table)))
+    (is (hash-table-p h))
+    (is (eql (hash-table-count h) 0))
+    (is (null (gethash :a h)))
+    (is (equal (setf (gethash :a h) 1) 1))
+    (is (eql (hash-table-count h) 1))
+    (is (eql (gethash :a h) 1))))
+
+(deftest random-hash-table-key-test ()
+  (is (null (random-hash-table-key (make-hash-table))))
+  (let* ((keys (loop for i from 0 to 9 collect i))
+         (h (make-hash-table)))
+    (dolist (k keys)
+      (setf (gethash k h) (+ k 100)))
+    (is (null
+         (loop repeat 100
+            do (let ((k (random-hash-table-key h)))
+                 (unless (member k keys)
+                   (return k))))))))
