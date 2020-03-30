@@ -1,5 +1,5 @@
 ARG LISP
-FROM ubuntu:16.04
+FROM ubuntu:20.04
 
 RUN apt-get -y update && \
     apt-get -y install autoconf build-essential git wget && \
