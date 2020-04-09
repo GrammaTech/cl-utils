@@ -205,6 +205,7 @@ is bound to a newly created temporary file.
 * PATHNAME Symbol to be bound to a newly created temporary file.
 * DIRECTORY Directory where the temporary file is to be created.
 * TYPE Extension of the temporary file.
+* KEEP Whether to retain the temporary file.
 
 All other keyword arguments are currently unimplemented and exist
 for compatability purposes with `uiop/stream:with-temporary-file`."
@@ -214,8 +215,11 @@ for compatability purposes with `uiop/stream:with-temporary-file`."
           "pathname must be given to `with-temporary-file'")
   (assert (not streamp) (stream)
           "stream not implemented for `with-temporary-file'")
-  `(let* ((,pathname (temp-file-name :directory ,directory :type ,type)))
-     (unwind-protect (progn ,@body) (delete-path ,pathname))))
+  (once-only (keep)
+    `(let* ((,pathname (temp-file-name :directory ,directory :type ,type)))
+       (unwind-protect (progn ,@body)
+         (unless ,keep
+           (delete-path ,pathname))))))
 
 (defmacro with-temporary-file-of
     ((&rest args &key (pathname (gensym "PATHNAME")) &allow-other-keys)
