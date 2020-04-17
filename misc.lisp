@@ -208,7 +208,7 @@ value, we return the values returned by the last form."
      when (funcall test item element)
      return (car rest)))
 
-(defun plist-drop-if (predicate list &aux last)
+(defun plist-drop-if (predicate list)
   (declare (optimize (speed 3)))
   (loop for (element . rest) on list by #'cddr
      unless (consp rest) do (error "Not a valid plist: ~a" list)
