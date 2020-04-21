@@ -38,6 +38,7 @@
                           :standard-generic-function
                           :defmethod
                           :defgeneric)
+  (:shadowing-import-from :functional-trees :mapcar :mapc)
   (:shadowing-import-from :fset
                           :@
                           :unionf :appendf :with :removef :size :complement
