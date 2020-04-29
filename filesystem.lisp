@@ -71,8 +71,10 @@
 The Unix `file' command is used, specifically \"file -b --mime-type PATH\"."
   (assert (probe-file path) (path) "No file or directory at ~S" path)
   (nest (mapcar #'intern) (split-sequence #\/) (string-upcase) (trim-whitespace)
-        (run-program (format nil "file -b --mime-type ~a" (namestring path))
-                     :output :string)))
+        (run-program
+         `("file" "-b" "--mime-type"
+                  ,(uiop:native-namestring path))
+         :output :string)))
 
 (defun file-to-string (filespec &key external-format)
   "Return the contents of FILESPEC as a string."
