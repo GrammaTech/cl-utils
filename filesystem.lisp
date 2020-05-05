@@ -198,7 +198,7 @@ USE-ENCODING. "
 
 (defmacro with-temporary-file ((&key (stream (gensym "STREAM") streamp)
                                   (pathname (gensym "PATHNAME") pathnamep)
-                                  (directory *temp-dir*) prefix suffix type
+                                  (directory '*temp-dir*) prefix suffix type
                                   keep direction element-type external-format)
                                &body body)
   "Evaluate BODY where the symbol specified by the keyword argument PATHNAME
