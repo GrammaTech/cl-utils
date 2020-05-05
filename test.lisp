@@ -9,7 +9,7 @@
         :gt/misc
         :gt/shell
         #+gt :testbot)
-  (:import-from :serapeum :trim-whitespace)
+  (:import-from :serapeum :trim-whitespace :string^=)
   (:export :test :batch-test :testbot-test))
 (in-package :gt/test)
 (in-readtable :curry-compose-reader-macros)
@@ -52,6 +52,12 @@
 
 (defsuite test)
 (in-suite test)
+
+(deftest rebind-temp-dir-at-runtime-test ()
+  (with-temporary-directory (:pathname outer)
+    (let ((*temp-dir* outer))
+      (with-temporary-file (:pathname inner)
+        (is (string^= (namestring outer) (namestring inner)))))))
 
 (deftest file-to-string-empty-file ()
   (with-temporary-file-of (:pathname tmp) ""
