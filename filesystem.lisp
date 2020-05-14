@@ -196,6 +196,11 @@ USE-ENCODING. "
 (defvar *temp-dir* (namestring (default-temporary-directory))
   "Set to non-nil for a custom temporary directory.")
 
+(uiop:register-image-restore-hook
+ (lambda ()
+   (setf *temp-dir*
+         (namestring (default-temporary-directory)))))
+
 (defmacro with-temporary-file ((&key (stream (gensym "STREAM") streamp)
                                   (pathname (gensym "PATHNAME") pathnamep)
                                   (directory '*temp-dir*) prefix suffix type
