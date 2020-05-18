@@ -1,4 +1,3 @@
-ARG LISP
 FROM ubuntu:20.04
 
 RUN apt-get -y update && \
@@ -28,9 +27,4 @@ exec ${CCL_DEFAULT_DIRECTORY}/lx86cl64 "$@"\n\
     cp -pr /tmp/ccl/* /usr/lib/ccl && \
     rm -rf /tmp/ccl
 
-COPY . /root/quicklisp/local-projects/gt
-WORKDIR /root/quicklisp/local-projects/gt
-ENV LISP=$LISP \
-    QUICK_LISP=/root/quicklisp/ \
-    LISP_HEAP=32678
-CMD /bin/bash
+WORKDIR /root/quicklisp/local-projects/

@@ -1,0 +1,46 @@
+variables:
+  DOCKER_REGISTRY: "docker.grammatech.com"
+  GIT_SUBMODULE_STRATEGY: recursive
+
+default:
+  image: $DOCKER_REGISTRY/$CI_PROJECT_PATH
+  tags: ["kubernetes", "cluster"]
+  before_script:
+    - cp -r $(pwd) /root/quicklisp/local-projects/$CI_PROJECT_NAME
+
+.test-template: &test
+  stage: test
+  script:
+    - LISP=$LISP make check
+  except:
+    - schedules
+
+test-sbcl:
+  variables:
+    LISP: 'sbcl'
+  <<: *test
+
+test-ccl:
+  variables:
+    LISP: 'ccl'
+  <<: *test
+
+dependents:
+  stage: deploy
+  script:
+    - "curl -X POST -F token=1a461b5961e7d178128c559ff81cdd -F ref=$CI_BUILD_REF_NAME https://git.grammatech.com/api/v4/projects/195/trigger/pipeline" # sel
+  only:
+    - master
+  except:
+    - schedules
+
+build-nightly:
+  inherit:
+    default: false
+  stage: build
+  script:
+    - docker build --no-cache -t $DOCKER_REGISTRY/$CI_PROJECT_PATH .
+    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $DOCKER_REGISTRY
+    - docker push $DOCKER_REGISTRY/$CI_PROJECT_PATH
+  only:
+    - schedules
