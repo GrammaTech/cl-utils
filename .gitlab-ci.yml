@@ -6,7 +6,7 @@ default:
   image: $DOCKER_REGISTRY/$CI_PROJECT_PATH
   tags: ["kubernetes", "cluster"]
   before_script:
-    - cp -r $(pwd) /root/quicklisp/local-projects/$CI_PROJECT_NAME
+    - cp -r $(pwd)/. /root/quicklisp/local-projects/$CI_PROJECT_NAME
 
 .test-template: &test
   stage: test
