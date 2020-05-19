@@ -27,6 +27,8 @@ test-ccl:
 
 dependents:
   stage: deploy
+  inherit:
+    default: false
   script:
     - "curl -X POST -F token=1a461b5961e7d178128c559ff81cdd -F ref=$CI_BUILD_REF_NAME https://git.grammatech.com/api/v4/projects/195/trigger/pipeline" # sel
   only:
@@ -35,9 +37,9 @@ dependents:
     - schedules
 
 build-nightly:
+  stage: build
   inherit:
     default: false
-  stage: build
   script:
     - docker build --no-cache -t $DOCKER_REGISTRY/$CI_PROJECT_PATH .
     - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $DOCKER_REGISTRY
