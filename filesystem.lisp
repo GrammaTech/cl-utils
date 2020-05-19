@@ -67,10 +67,13 @@
 (in-package :gt/filesystem)
 
 (defun file-mime-type (path)
-  "Return the mime type of PATH as a list of two symbols.
+  "Return the mime type of PATH as a list of two keywords.
 The Unix `file' command is used, specifically \"file -b --mime-type PATH\"."
   (assert (probe-file path) (path) "No file or directory at ~S" path)
-  (nest (mapcar #'intern) (split-sequence #\/) (string-upcase) (trim-whitespace)
+  (nest (mapcar #'make-keyword)
+        (split-sequence #\/)
+        (string-upcase)
+        (trim-whitespace)
         (run-program
          `("file" "-b" "--mime-type"
                   ,(uiop:native-namestring path))
