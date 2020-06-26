@@ -10,6 +10,8 @@
         :gt/shell
         #+gt :testbot)
   (:import-from :serapeum :trim-whitespace :string^=)
+  (:import-from :gt :equal?)
+  (:import-from :fset :seq)
   (:export :test :batch-test :testbot-test))
 (in-package :gt/test)
 (in-readtable :curry-compose-reader-macros)
@@ -622,3 +624,63 @@
             do (let ((k (random-hash-table-key h)))
                  (unless (member k keys)
                    (return k))))))))
+
+(defclass example-object ()
+  ((foo :initarg :foo :accessor foo)
+   (bar :initarg :bar :accessor bar)))
+
+(deftest equal?-test ()
+  (is (equal? 1 1))
+  (is (not (equal? 1 2)))
+  (is (equal? #\a #\a))
+  (is (not (equal? #\a #\b)))
+  (is (equal? "foo" "foo"))
+  (is (not (equal? "foo" "bar")))
+  (is (equal? (seq 1 2 3) (seq 1 2 3)))
+  (is (not (equal? (seq 1 2 3) (seq 1 2 4))))
+  (is (not (equal? (seq 1 2 3) (seq 1 2 3 4))))
+  (is (equal? (list 1 2 3) (list 1 2 3)))
+  (is (not (equal? (list 1 2 3) (list 1 2 4))))
+  (is (not (equal? (list 1 2 3) (list 1 2 3 4))))
+  (is (equal? '(a . b) '(a . b)))
+  (is (not (equal? '(a . b) '(a . (b . c)))))
+  (is (equal? #(1 2) #(1 2))) 
+  (is (not (equal? #(1 2) #(1 2 3))))
+  (is (not (equal? #(2 2) #(1 2))))
+  ;; Hash tables
+  (let ((a-equalp (make-hash-table :test #'equalp))
+        (a (make-hash-table))
+        (b-equalp (make-hash-table :test #'equalp))
+        (b (make-hash-table)))
+
+    (is (not (equal? a-equalp a)))
+
+    (mapc (lambda (pair)
+            (destructuring-bind (key . value) pair
+              (setf (gethash key a) value)
+              (setf (gethash key b) value)))
+          '((a . 1)
+            (b . 2)
+            (c . 3)))
+
+    (is (equal? a b))
+    (setf (gethash 'd b) 4)
+    (is (not (equal? a b)))
+
+    (mapc (lambda (pair)
+            (destructuring-bind (key . value) pair
+              (setf (gethash key a-equalp) value)
+              (setf (gethash key b-equalp) value)))
+          '(("foo" . 1)
+            ("bar" . 2)
+            ("baz" . 3)))
+
+    (is (equal? a-equalp b-equalp))
+    (setf (gethash "foo" b-equalp) 0)
+    (is (not (equal? a-equalp b-equalp))))
+  ;; Objects
+  (let ((a (make-instance 'example-object :foo 1 :bar 2))
+        (a2 (make-instance 'example-object :foo 1 :bar 2))
+        (b (make-instance 'example-object :foo 2 :bar 1)))
+    (is (equal? a a2))
+    (is (not (equal? a b)))))
