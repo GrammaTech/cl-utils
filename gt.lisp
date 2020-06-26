@@ -20,7 +20,7 @@
   (:shadow :mapconcat :~> :~~>)  ; Shadow serapeum arrows & mapconcat.
   (:shadow :lines)                      ; We wrap in a defgeneric.
   (:shadow :exe)                        ; This isn't generically useful.
-  (:shadow :equal?)                     ; We're rather this be generic.
+  (:shadow :equal?)                     ; We'd rather this be generic.
   (:shadowing-import-from :common-lisp
                           :map)         ; Shadow fset:map.
   (:shadowing-import-from :serapeum
@@ -162,4 +162,4 @@ An extension of `serapeum:mapconct' to include fset collections.")
 
 (defgeneric equal? (a b)
   (:documentation "Generic equality designed to descend into structures.")
-  (:method ((a collection) (b collection)) (equal? a b)))
+  (:method ((a collection) (b collection)) (fset:equal? a b)))
