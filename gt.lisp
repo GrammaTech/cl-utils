@@ -65,7 +65,8 @@
            :positive-infinity
            :infinity
            :parse-number
-           :parse-numbers))
+   :parse-numbers
+           :equal?))
 ;;; NOTE: *Consider* including Generic-cl less its new seq. stuff.
 (in-package :gt)
 
@@ -135,17 +136,17 @@ An extension of `serapeum:mapconct' to include fset collections.")
 (defun parse-number (string)
   "Parse the number located at the front of STRING or return an error."
   (let ((number-str
-         (or (multiple-value-bind (whole matches)
-                 (scan-to-strings
-                  "^(-?.?[0-9]+(/[-e0-9]+|\\.[-e0-9]+)?)([^\\./A-Xa-x_-]$|$)"
-                  string)
-               (declare (ignorable whole))
-               (when matches (aref matches 0)))
-             (multiple-value-bind (whole matches)
-                 (scan-to-strings "0([xX][0-9A-Fa-f]+)([^./]|$)"
-                                  string)
-               (declare (ignorable whole))
-               (when matches (concatenate 'string "#" (aref matches 0)))))))
+          (or (multiple-value-bind (whole matches)
+                  (scan-to-strings
+                   "^(-?.?[0-9]+(/[-e0-9]+|\\.[-e0-9]+)?)([^\\./A-Xa-x_-]$|$)"
+                   string)
+                (declare (ignorable whole))
+                (when matches (aref matches 0)))
+              (multiple-value-bind (whole matches)
+                  (scan-to-strings "0([xX][0-9A-Fa-f]+)([^./]|$)"
+                                   string)
+                (declare (ignorable whole))
+                (when matches (concatenate 'string "#" (aref matches 0)))))))
     (unless number-str
       (make-condition 'parse-number :text string))
     (read-from-string number-str)))
@@ -163,15 +164,25 @@ An extension of `serapeum:mapconct' to include fset collections.")
 (defgeneric equal? (a b)
   (:documentation "Generic equality designed to descend into structures.")
   (:method ((a t) (b t)) (equalp a b))
-  (:method ((a number) (b number) (= a b)))
+  (:method ((a number) (b number)) (= a b))
+  (:method ((a character) (b character)) (char= a b))
   (:method ((a string) (b string)) (string= a b))
   (:method ((a collection) (b collection)) (fset:equal? a b))
   (:method ((a sequence) (b sequence))
     (and (= (length a) (length b))
          (every #'equal? a b)))
   (:method ((a cons) (b cons)) (tree-equal a b :test #'equal?))
+  (:method ((a array) (b array))
+    (and (= (array-total-size a)
+            (array-total-size b))
+         (equal (array-dimensions a)
+                (array-dimensions b))
+         (iter (for i below (array-total-size a))
+           (always (equal? (row-major-aref a i)
+                           (row-major-aref b i))))))
   (:method ((a hash-table) (b hash-table))
     (and (= (hash-table-count a) (hash-table-count b))
+         (eql (hash-table-test a) (hash-table-test b))
          (every (lambda (key) (equal? (gethash key a) (gethash key b)))
                 (hash-table-keys a))))
   (:method ((a standard-object) (b standard-object))
