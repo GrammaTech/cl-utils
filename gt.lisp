@@ -163,6 +163,7 @@ An extension of `serapeum:mapconct' to include fset collections.")
 
 (defgeneric equal? (a b)
   (:documentation "Generic equality designed to descend into structures.")
+  (:method :around ((a t) (b t)) (or (eql a b) (call-next-method)))
   (:method ((a t) (b t)) (equalp a b))
   (:method ((a number) (b number)) (= a b))
   (:method ((a character) (b character)) (char= a b))
