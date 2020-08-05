@@ -44,6 +44,7 @@
            :which
            :getenv
            :os-unix-p
+           :kill-process
            #+windows :ensure-slash
            #+windows :convert-backslash-to-slash))
 (in-package :gt/shell)
@@ -331,3 +332,15 @@ are preceded by an extra pair of backslashes. See also `escape-string'."
            (let ((fullpath (merge-pathnames file (ensure-slash dir))))
              (when (probe-file fullpath)
                (return fullpath)))))
+
+(defun kill-process (process &key urgent)
+  "Terminate PROCESS and all its descendants.
+
+On Unix, sends a TERM signal by default, or a KILL signal if URGENT."
+  (if (os-unix-p)
+      ;; Kill the entire process group (process and its children).
+      (shell "kill -~d -$(ps -o pgid= ~d | tr -d ' ')"
+             (if urgent 9 15) (process-info-pid process))
+      ;; If non-unix, utilize the standard terminate process
+      ;; which should be acceptable in most cases.
+      (terminate-process process :urgent urgent)))

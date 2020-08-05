@@ -1,7 +1,7 @@
 FROM ubuntu:20.04
 
 RUN apt-get -y update && \
-    apt-get -y install autoconf build-essential git wget && \
+    apt-get -y install autoconf build-essential git lsof wget && \
     apt-get -y install sbcl
 
 # Install quicklisp

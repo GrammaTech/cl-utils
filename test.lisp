@@ -10,7 +10,7 @@
         :gt/shell
         #+gt :testbot)
   (:import-from :serapeum :trim-whitespace :string^=)
-  (:import-from :gt :equal?)
+  (:import-from :gt :equal? :lines)
   (:import-from :fset :seq)
   (:shadowing-import-from :fset :set)
   (:export :test :batch-test :testbot-test))
@@ -321,6 +321,20 @@
            (handler-case (shell "exit 3")
              (shell-command-failed () (invoke-restart 'gt/shell::ignore-shell-error nil))))
           '("" "" 3))))
+
+#-windows
+(deftest kill-process-test ()
+  ;; kill all descendants (e.g. grandchildren), not just immediate children
+  (let* ((script "FILE=$(mktemp) && echo $FILE && sh -c \"tail -f $FILE\"")
+         (proc (launch-program script :output :stream))
+         (filename (read-line (process-info-output proc))))
+    (is (process-alive-p proc))
+    (is (string^= "/tmp/tmp." filename))
+    (flet ((lsof () (length (lines (shell (format nil "lsof ~a" filename))))))
+      (is (= 2 (lsof)))                 ; header line plus one process
+      (kill-process proc)
+      (is (not (process-alive-p proc)))
+      (is (= 0 (lsof))))))              ; header isn't printed when no processes
 
 (deftest pad-list-expand-to-requisite-length ()
   (is (equal '(1 2 3 3) (pad '(1 2) 4 3))))
