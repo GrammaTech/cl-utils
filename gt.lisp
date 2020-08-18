@@ -13,7 +13,8 @@
 (uiop/package:define-package :gt
     (:nicknames :gt/gt)
   (:use-reexport :common-lisp :alexandria :serapeum :closer-mop
-                 :trivia :iterate :gt/fset :fset :gmap :split-sequence :cl-ppcre
+                 :trivia :cl-ppcre :trivia.ppcre
+                 :iterate :gt/fset :fset :gmap :split-sequence
                  :bordeaux-threads
                  :functional-trees
                  :named-readtables :curry-compose-reader-macros)
