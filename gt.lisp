@@ -66,8 +66,14 @@
            :positive-infinity
            :infinity
            :parse-number
-   :parse-numbers
-           :equal?))
+           :parse-numbers
+           :equal?
+           :in-seq :index-of-seq
+           :in-set
+           :in-map
+           :in-iterator
+           :in-map-iterator
+           :in-tree))
 ;;; NOTE: *Consider* including Generic-cl less its new seq. stuff.
 (in-package :gt)
 
@@ -215,3 +221,93 @@ An extension of `serapeum:mapconcat' to include fset collections.")
                   (let ((name (slot-definition-name slot)))
                     (equal? (slot-value a name) (slot-value b name))))
                 (class-slots (class-of a))))))
+
+
+;;; Iterate drivers for FSet and functional-trees.
+
+(defclause-sequence in-seq index-of-seq
+  :access-fn 'fset:lookup
+  :size-fn 'fset:size
+  :element-type t
+  :element-doc-string "Elements of anything that implements fset:size and fset:lookup."
+  :index-doc-string "Indices of anything that implements fset:size and fset:lookup.")
+
+(defmacro-driver (for x in-set s)
+  "Driver for FSet sets."
+  (with-unique-names (gset elt)
+    (let ((kwd (if generate 'generate 'for)))
+      `(progn
+         (iterate:with ,gset = ,s)
+         (,kwd ,x
+               next
+               (if (empty? ,gset)
+                   (terminate)
+                   (let ((,elt (arb ,gset)))
+                     (setf ,gset (less ,gset ,elt))
+                     ,elt)))))))
+
+(defmacro-driver (for node in-iterator it)
+  "Driver for FSet iterators."
+  (let ((for (if generate 'generate 'for)))
+    (with-unique-names (next v present?)
+      `(progn
+         (iterate:with ,next = (ensure-function ,it))
+         (,for ,node next
+               (multiple-value-bind (,v ,present?)
+                   (funcall ,next :get)
+                 (if ,present?
+                     ,v
+                     (terminate))))))))
+
+(defmacro-driver (for node in-map-iterator it)
+  "Driver for FSet map iterators."
+  (let ((for (if generate 'generate 'for)))
+    (with-unique-names (next k v present?)
+      `(progn
+         (iterate:with ,next = (ensure-function ,it))
+         (,for ,node next
+               (multiple-value-bind (,k ,v ,present?)
+                   (funcall ,next :get)
+                 (if ,present?
+                     (list ,k ,v)
+                     (terminate))))))))
+
+(defmacro-driver (for node in-tree tree)
+  "Driver for functional trees."
+  (let ((kwd (if generate 'generate 'for)))
+    `(,kwd ,node in-iterator (iterator ,tree))))
+
+(defmacro-driver (for node in-map map)
+  "Driver for FSet maps. Each key-value pair is returned as
+a two-element list."
+  (let ((kwd (if generate 'generate 'for)))
+    `(,kwd ,node in-map-iterator (iterator ,map))))
+
+(defmacro-driver (for elt in-bag bag)
+  "Driver for FSet bags."
+  (let ((kwd (if generate 'generate 'for)))
+    `(,kwd ,elt in-iterator (iterator ,bag))))
+
+(defmacro-driver (for elt in-bag-pairs bag)
+  "Driver for FSet bags."
+  (let ((kwd (if generate 'generate 'for)))
+    `(,kwd ,elt in-map-iterator (iterator ,bag :pairs? t))))
+
+(defmethod iterator (node &key)
+  "An FSet iterator for functional trees."
+  (let ((stack (list node)))
+    (lambda (arg)
+      (ecase arg
+        (:done? (null stack))
+        (:more? (not (null stack)))
+        (:get
+         (if (null stack)
+             (values nil nil)
+             (let* ((node (pop stack))
+                    (children
+                     (if (typep node 'node)
+                         (cl:remove-if-not (of-type 'node)
+                                           (children node))
+                         nil)))
+               (setf stack (append children stack))
+               (values node t))))))))
