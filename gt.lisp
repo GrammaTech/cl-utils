@@ -319,4 +319,4 @@ a two-element list."
     `(reducing ,kv by #'apply-with into ,var initial-value (empty-map)))
 
 (defmacro map-collect (k v &rest args)
-  `(%map-collect (cons ,k ,v) ,@args))
+  `(%map-collect (list ,k ,v) ,@args))
