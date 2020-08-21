@@ -73,7 +73,10 @@
            :in-map
            :in-iterator
            :in-map-iterator
-           :in-tree))
+           :in-tree
+           :set-collect
+           :seq-collect
+           :map-collect))
 ;;; NOTE: *Consider* including Generic-cl less its new seq. stuff.
 (in-package :gt)
 
@@ -311,3 +314,18 @@ a two-element list."
                          nil)))
                (setf stack (append children stack))
                (values node t))))))))
+
+(defmacro-clause (set-collect x &optional into var)
+    `(reducing ,x by #'fset:with into ,var initial-value (empty-set)))
+
+(defmacro-clause (seq-collect x &optional into var)
+    `(reducing ,x by #'fset:with-last into ,var initial-value (empty-seq)))
+
+(defsubst apply-with (map kv)
+  (apply #'fset:with map kv))
+
+(defmacro-clause (%map-collect kv &optional into var)
+    `(reducing ,kv by #'apply-with into ,var initial-value (empty-map)))
+
+(defmacro map-collect (k v &rest args)
+  `(%map-collect (cons ,k ,v) ,@args))
