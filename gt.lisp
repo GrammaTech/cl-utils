@@ -235,20 +235,6 @@ An extension of `serapeum:mapconcat' to include fset collections.")
   :element-doc-string "Elements of anything that implements fset:size and fset:lookup."
   :index-doc-string "Indices of anything that implements fset:size and fset:lookup.")
 
-(defmacro-driver (for x in-set s)
-  "Driver for FSet sets."
-  (with-unique-names (gset elt)
-    (let ((kwd (if generate 'generate 'for)))
-      `(progn
-         (iterate:with ,gset = ,s)
-         (,kwd ,x
-               next
-               (if (empty? ,gset)
-                   (terminate)
-                   (let ((,elt (arb ,gset)))
-                     (setf ,gset (less ,gset ,elt))
-                     ,elt)))))))
-
 (defmacro-driver (for node in-iterator it)
   "Driver for FSet iterators."
   (let ((for (if generate 'generate 'for)))
@@ -274,6 +260,11 @@ An extension of `serapeum:mapconcat' to include fset collections.")
                  (if ,present?
                      (list ,k ,v)
                      (terminate))))))))
+
+(defmacro-driver (for x in-set set)
+  "Driver for FSet sets."
+  (let ((kwd (if generate 'generate 'for)))
+    `(,kwd ,x in-iterator (iterator ,set))))
 
 (defmacro-driver (for node in-tree tree)
   "Driver for functional trees."
