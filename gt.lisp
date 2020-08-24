@@ -68,6 +68,7 @@
            :parse-number
            :parse-numbers
            :equal?
+           :withf :lessf
            :in-seq :index-of-seq
            :in-set
            :in-map
@@ -79,6 +80,11 @@
            :map-collect))
 ;;; NOTE: *Consider* including Generic-cl less its new seq. stuff.
 (in-package :gt)
+
+(define-modify-macro withf (&rest item-or-tuple) with
+  "Modify macro for `fset:with'.")
+(define-modify-macro lessf (&rest item-or-tuple) less
+  "Modify macro for `fset:less'.")
 
 ;;; A poor approximation of `serapium:@'.
 (defmethod lookup ((table hash-table) key)
