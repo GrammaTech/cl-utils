@@ -12,3 +12,6 @@
 ;;;; and no official endorsement should be inferred.
 (uiop/package:define-package :gt/full
     (:use-reexport :gt/gt :gt/filesystem :gt/misc :gt/profile :gt/shell))
+
+(defpackage :gt-user
+  (:use :gt/full))
