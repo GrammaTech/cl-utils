@@ -293,7 +293,7 @@ a two-element list."
   (let ((kwd (if generate 'generate 'for)))
     `(,kwd ,elt in-map-iterator (iterator ,bag :pairs? t))))
 
-(defmethod iterator (node &key)
+(defmethod iterator ((node node) &key)
   "An FSet iterator for functional trees."
   (let ((stack (list node)))
     (lambda (arg)
