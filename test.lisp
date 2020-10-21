@@ -4,7 +4,7 @@
   (:use :common-lisp
         :curry-compose-reader-macros
         :named-readtables
-        :stefil
+        :stefil+
         :gt/filesystem
         :gt/misc
         :gt/shell
