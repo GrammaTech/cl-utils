@@ -10,7 +10,7 @@ default:
 .test-template: &test
   stage: test
   script:
-    - LISP=$LISP make check
+    - LISP=$LISP make real-check
   except:
     - schedules
 

@@ -147,7 +147,7 @@ to a file at PROFILE-PATH.  Currently only works in SBCL."
   ;; Profiler settings
   `(if ,profile-path
        (sb-sprof:with-profiling (:sample-interval .01
-                                                  :max-samples 10000000
+                                                  :max-samples 1000000
                                                   :mode :cpu
                                                   :loop nil)
          ,@body

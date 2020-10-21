@@ -7,6 +7,6 @@
   :defsystem-depends-on (:asdf-package-system)
   :depends-on (:gt/gt)
   :in-order-to ((test-op (load-op "gt/test")))
-  :perform (test-op (o c) (symbol-call :gt/test '#:test)))
+  :perform (test-op (o c) (symbol-call :gt/test '#:run-batch)))
 
 (register-system-packages "misc-extensions" '(:gmap))
