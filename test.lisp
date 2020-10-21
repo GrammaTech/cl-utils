@@ -25,7 +25,7 @@
                                 (list "test" "etc"))
   "Path to directory holding testing artifacts.")
 
-(defsuite test)
+(defsuite test "GT top-level test suite.")
 (in-suite test)
 
 (deftest rebind-temp-dir-at-runtime-test ()
