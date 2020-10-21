@@ -25,6 +25,7 @@
                                 (list "test" "etc"))
   "Path to directory holding testing artifacts.")
 
+(defroot test)
 (defsuite test "GT top-level test suite.")
 (in-suite test)
 
