@@ -27,7 +27,6 @@
 
 (defroot test)
 (defsuite test "GT top-level test suite.")
-(in-suite test)
 
 (deftest rebind-temp-dir-at-runtime-test ()
   (with-temporary-directory (:pathname outer)
