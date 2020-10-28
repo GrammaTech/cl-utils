@@ -70,14 +70,39 @@
   "Return the mime type of PATH as a list of two keywords.
 The Unix `file' command is used, specifically \"file -b --mime-type PATH\"."
   (assert (probe-file path) (path) "No file or directory at ~S" path)
-  (nest (mapcar #'make-keyword)
-        (split-sequence #\/)
-        (string-upcase)
-        (trim-whitespace)
-        (run-program
-         `("file" "-b" "--mime-type"
-                  ,(uiop:native-namestring path))
-         :output :string)))
+  (flet ((file-mime-type (path)
+           (nest (mapcar #'make-keyword)
+                 (split-sequence #\/)
+                 (string-upcase)
+                 (trim-whitespace)
+                 (run-program
+                  `("file" "-b" "--mime-type"
+                           ,(uiop:native-namestring path))
+                  :output :string))))
+    (let ((type (pathname-type path)))
+      (if (null type) (file-mime-type path)
+          ;; Handle the most common extensions inline. These are not
+          ;; "correct" (e.g. the correct mime type for a .json file is
+          ;; application/json) but they reflect the behavior of the
+          ;; `file' command and what the callers of this function
+          ;; expect.
+          (string-case (pathname-type path)
+            (("java"
+              "txt" "md" "org" "yml" "yaml" "html"
+              "js" "ts" "json" "map"    ;.map for JS source maps.
+              "lisp" "asd")
+             '(:text :plain))
+            ("xml" '(:text :xml))
+            (("cpp" "hpp") '(:text :x-c++))
+            (("py" "pyi")
+             '(:text :x-python))
+            (("dat" "pyc")
+             '(:application :octet-stream))
+            ("class"
+             '(:application :x-java-applet))
+            ("png" '(:image :png))
+            ("jpeg" '(:image :jpeg))
+            (t (file-mime-type path)))))))
 
 (defun file-to-string (filespec &key external-format)
   "Return the contents of FILESPEC as a string."
