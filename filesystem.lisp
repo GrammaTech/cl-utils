@@ -174,12 +174,15 @@ The Unix `file' command is used, specifically \"file -b --mime-type PATH\"."
 ;;; encodings properly.
 (defun string-to-file (string filespec &key
                                          (if-exists :supersede)
-                                         (external-format :default))
+                                         (external-format :default)
+                       &aux file-exists-p)
   "Write STRING to FILESPEC.
 Restarts available to handle cases where FILESPEC is not writable,
 SET-FILE-WRITABLE, and where the appropriate encoding is not used,
 USE-ENCODING. "
-  (setf filespec (if (probe-file filespec) (truename filespec) filespec))
+  (when-let (truename (probe-file filespec))
+    (setf file-exists-p t
+          filespec truename))
   (labels ((run-write ()
              (ensure-directories-exist filespec)
              (with-open-file (out filespec :direction :output
@@ -187,7 +190,7 @@ USE-ENCODING. "
                                   :external-format external-format)
                (format out "~a" string))))
 
-    (when (and (file-exists-p filespec)
+    (when (and file-exists-p
                (not (member :user-write (file-permissions filespec))))
       (restart-case
           (error (make-condition 'file-access
