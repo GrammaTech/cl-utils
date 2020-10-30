@@ -36,6 +36,7 @@
    :file-mime-type
    :file-to-string
    :file-to-bytes
+   :with-character-output-to-file
    :string-to-file
    :bytes-to-file
    :file-access
@@ -169,14 +170,12 @@ The Unix `file' command is used, specifically \"file -b --mime-type PATH\"."
                      (file-access-operation condition)
                      (file-access-path condition)))))
 
-;;; TODO: Replace with `alexandria:write-string-into-file'?
-;;; We would need to add additional wrapper logic to handle
-;;; encodings properly.
-(defun string-to-file (string filespec &key
-                                         (if-exists :supersede)
-                                         (external-format :default)
-                       &aux file-exists-p)
-  "Write STRING to FILESPEC.
+(defun call-with-character-output-to-file
+    (function filespec &key
+                         (if-exists :supersede)
+                         (external-format :default)
+     &aux file-exists-p)
+  " to FILESPEC.
 Restarts available to handle cases where FILESPEC is not writable,
 SET-FILE-WRITABLE, and where the appropriate encoding is not used,
 USE-ENCODING. "
@@ -188,7 +187,7 @@ USE-ENCODING. "
              (with-open-file (out filespec :direction :output
                                            :if-exists if-exists
                                            :external-format external-format)
-               (write-string string out))))
+               (funcall function out))))
 
     (when (and file-exists-p
                (not (member :user-write (file-permissions filespec))))
@@ -215,6 +214,29 @@ USE-ENCODING. "
         (setf external-format encoding)
         (run-write))))
   filespec)
+
+(defmacro with-character-output-to-file ((stream filespec &rest args
+                                          &key &allow-other-keys)
+                                         &body body)
+  "Open FILESPEC for character output (providing restarts for common
+problems) and bind the stream to STREAM."
+  `(call-with-character-output-to-file
+    (lambda (,stream)
+      ,@body)
+    ,filespec
+    ,@args))
+
+(defun string-to-file (string filespec &key
+                                         (if-exists :supersede)
+                                         (external-format :default))
+  "Write STRING to FILESPEC.
+Restarts available to handle cases where FILESPEC is not writable,
+SET-FILE-WRITABLE, and where the appropriate encoding is not used,
+USE-ENCODING. "
+  (with-character-output-to-file (out filespec
+                                      :if-exists if-exists
+                                      :external-format external-format)
+    (write-string string out)))
 
 (defun bytes-to-file (bytes filespec &key (if-exists :supersede))
   "Write BYTES to FILESPEC"
