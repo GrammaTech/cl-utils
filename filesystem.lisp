@@ -186,9 +186,9 @@ USE-ENCODING. "
   (labels ((run-write ()
              (ensure-directories-exist filespec)
              (with-open-file (out filespec :direction :output
-                                  :if-exists if-exists
-                                  :external-format external-format)
-               (format out "~a" string))))
+                                           :if-exists if-exists
+                                           :external-format external-format)
+               (write-string string out))))
 
     (when (and file-exists-p
                (not (member :user-write (file-permissions filespec))))
