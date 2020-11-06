@@ -37,8 +37,10 @@
                           :standard-method
                           :standard-class
                           :standard-generic-function
-                          :defmethod
                           :defgeneric)
+  ;; We want defmethod to always signal a style warning if there is no
+  ;; generic function.
+  (:shadow :defmethod)
   (:shadowing-import-from :functional-trees :mapcar :mapc)
   (:shadowing-import-from :fset
                           :@
@@ -80,6 +82,11 @@
            :map-collect))
 ;;; NOTE: *Consider* including Generic-cl less its new seq. stuff.
 (in-package :gt)
+
+(defmacro defmethod (name &body body)
+  "Like `c2mop:defmethod', but always warn if there is no generic function."
+  `(symbol-macrolet ((c2mop:warn-on-defmethod-without-generic-function t))
+     (c2mop:defmethod ,name ,@body)))
 
 (define-modify-macro withf (&rest item-or-tuple) with
   "Modify macro for `fset:with'.")
