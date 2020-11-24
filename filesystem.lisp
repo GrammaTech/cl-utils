@@ -62,6 +62,7 @@
    :pathname-relativize
    :directory-p
    :getcwd
+   :chdir
    :with-current-directory
    :file-permissions
    :pathname-as-directory))
@@ -592,3 +593,9 @@ supported on all platforms.  See LIST-DIRECTORY."
     ((wild-pathname-p pathname) nil)
     ;; `directory-exists-p' (like this function) returns the pathname.
     (t (directory-exists-p (pathname-as-directory pathname)))))
+
+(defun chdir (pathname)
+  "First `chdir' to PATHNAME then set as `*default-pathname-defaults*'."
+  (let ((pathname (truename (pathname-as-directory pathname))))
+    (uiop/os:chdir pathname)
+    (setf *default-pathname-defaults* pathname)))
