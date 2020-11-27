@@ -22,6 +22,7 @@
   (:import-from :cl-dot)
   (:import-from :uiop/run-program :run-program)
   (:import-from :uiop/os :getenv)
+  #+sbcl (:import-from :sb-sprof)
   (:export :*profile-dot-min-ratio*
            :*profile-flame-graph*
            :profile-to-dot-graph
