@@ -37,11 +37,16 @@ dependents:
 
 scheduled-build:
   stage: build
-  inherit:
-    default: false
+  image: 
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
   script:
-    - docker build --no-cache -t $DOCKER_REGISTRY/$CI_PROJECT_PATH .
-    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $DOCKER_REGISTRY
-    - docker push $DOCKER_REGISTRY/$CI_PROJECT_PATH
-  only:
-    - schedules
+    - echo $DOCKER_AUTHS > /kaniko/.docker/config.json
+    - >-
+      /kaniko/executor
+      --context=$CI_PROJECT_DIR/
+      --dockerfile=$CI_PROJECT_DIR/Dockerfile
+      --destination=$DOCKER_REGISTRY/$CI_PROJECT_PATH
+  # Temporarily inhibited to test on a branch
+  # only:
+  #   - schedules
