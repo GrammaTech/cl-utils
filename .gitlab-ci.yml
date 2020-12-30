@@ -51,6 +51,5 @@ scheduled-build:
       --context=$CI_PROJECT_DIR/
       --dockerfile=$CI_PROJECT_DIR/Dockerfile
       --destination=$DOCKER_REGISTRY/$CI_PROJECT_PATH
-  # Temporarily inhibited to test on a branch
-  # only:
-  #   - schedules
+  only:
+    - schedules
