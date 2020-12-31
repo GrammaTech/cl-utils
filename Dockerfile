@@ -1,7 +1,7 @@
 FROM ubuntu:20.04
 
 RUN apt-get -y update && \
-    apt-get -y install autoconf build-essential git wget python3-pip sbcl curl
+    apt-get -y install autoconf build-essential git lsof wget python3-pip sbcl curl
 
 # Install quicklisp
 RUN cd /tmp/ && \
