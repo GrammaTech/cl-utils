@@ -28,8 +28,7 @@
                           :tuple)       ; Shadow fset:tuple.
   (:shadowing-import-from :alexandria
                           :compose)     ; Shadow fset:compose.
-  (:shadowing-import-from :trivia
-                          :alist)       ; Shadow fset:alist.
+  (:shadow :alist)       ; Shadow fset:alist and trivia:alist.
   (:shadowing-import-from :iterate
                           ;; Shadow serapeum macros.
                           :summing :collecting :sum :in)
@@ -79,7 +78,8 @@
            :in-tree
            :set-collect
            :seq-collect
-           :map-collect))
+           :map-collect
+           :alist))
 ;;; NOTE: *Consider* including Generic-cl less its new seq. stuff.
 (in-package :gt)
 
@@ -333,3 +333,9 @@ a two-element list."
 
 (defmacro map-collect (k v &rest args)
   `(%map-collect (list ,k ,v) ,@args))
+
+(defpattern alist (&rest args)
+  `(trivia:alist ,@args))
+
+(defmethod convert ((to-type (eql 'alist)) object &rest args &key)
+  (apply #'convert 'fset:alist object args))
