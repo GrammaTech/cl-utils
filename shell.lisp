@@ -33,6 +33,7 @@
            :shell-command-failed
            :shell
            :write-shell
+           :io-shell
            :read-shell
            :write-shell-file
            :read-shell-file
@@ -190,7 +191,7 @@ Optionally print debug information if `*shell-debug*' is non-nil."
 (defmacro io-shell ((io stream-var shell &rest args) &body body)
   "Executes BODY with STREAM-VAR holding the input or output of SHELL.
 ARGS (including keyword arguments) are passed through to `uiop:launch-program'."
-  (assert (member io '(:input :output)) (io)
+  (assert (member io '(:input :output :error-output)) (io)
           "first argument ~a to `io-shell' is not one of :INPUT or :OUTPUT" io)
   (let ((proc-sym (gensym)))
     `(let* ((,proc-sym (launch-program ,shell ,@args
@@ -200,7 +201,8 @@ ARGS (including keyword arguments) are passed through to `uiop:launch-program'."
        (with-open-stream
            (,stream-var (make-flexi-stream
                          ,(ecase io
-                            (:input `(process-info-input ,proc-sym))
+                            (:input `(process-info-input  ,proc-sym))
+                            (:error-output `(process-info-error-output ,proc-sym))
                             (:output `(process-info-output ,proc-sym)))))
          ,@body))))
 
