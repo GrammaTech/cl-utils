@@ -187,7 +187,7 @@ Optionally print debug information if `*shell-debug*' is non-nil."
       (values stdout-str stderr-str errno))))
 
 #-windows  ; IO-SHELL not yet supported on Windows
-(defmacro io-shell ((io stream-var shell &rest args) &rest body)
+(defmacro io-shell ((io stream-var shell &rest args) &body body)
   "Executes BODY with STREAM-VAR holding the input or output of SHELL.
 ARGS (including keyword arguments) are passed through to `uiop:launch-program'."
   (assert (member io '(:input :output)) (io)
@@ -204,27 +204,27 @@ ARGS (including keyword arguments) are passed through to `uiop:launch-program'."
                             (:output `(process-info-output ,proc-sym)))))
          ,@body))))
 
-(defmacro write-shell ((stream-var shell &rest args) &rest body)
+(defmacro write-shell ((stream-var shell &rest args) &body body)
   "Executes BODY with STREAM-VAR passing the input to SHELL.
 ARGS (including keyword arguments) are passed through to `uiop:launch-program'."
   `(io-shell (:input ,stream-var ,shell ,@args) ,@body))
 
-(defmacro read-shell ((stream-var shell &rest args) &rest body)
+(defmacro read-shell ((stream-var shell &rest args) &body body)
   "Executes BODY with STREAM-VAR holding the output of SHELL.
 ARGS (including keyword arguments) are passed through to `uiop:launch-program'."
   `(io-shell (:output ,stream-var ,shell ,@args) ,@body))
 
-(defmacro write-shell-file ((stream-var file shell &rest args) &rest body)
+(defmacro write-shell-file ((stream-var file shell &rest args) &body body)
   "Executes BODY with STREAM-VAR passing through SHELL to FILE.
 ARGS (including keyword arguments) are passed through to `uiop:launch-program'."
   `(io-shell (:input ,stream-var ,shell ,@args :output ,file) ,@body))
 
-(defmacro read-shell-file ((stream-var file shell &rest args) &rest body)
+(defmacro read-shell-file ((stream-var file shell &rest args) &body body)
   "Executes BODY with STREAM-VAR passing through SHELL from FILE.
 ARGS (including keyword arguments) are passed through to `uiop:launch-program'"
   `(io-shell (:output ,stream-var ,shell ,@args :input ,file) ,@body))
 
-(defmacro xz-pipe ((in-stream in-file) (out-stream out-file) &rest body)
+(defmacro xz-pipe ((in-stream in-file) (out-stream out-file) &body body)
   "Execute BODY with IN-STREAM and OUT-STREAM read/writing data from xz files."
   `(read-shell-file (,in-stream ,in-file "unxz")
      (write-shell-file (,out-stream ,out-file "xz")
