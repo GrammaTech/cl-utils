@@ -44,8 +44,10 @@ scheduled-build:
     name: gcr.io/kaniko-project/executor:debug
     entrypoint: [""]
   tags: ["kubernetes", "cluster"]
+  before_script:
+    - mkdir -p /kaniko/.docker
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
   script:
-    - echo $DOCKER_AUTHS > /kaniko/.docker/config.json
     - >-
       /kaniko/executor
       --context=$CI_PROJECT_DIR/
