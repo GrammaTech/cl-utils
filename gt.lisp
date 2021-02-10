@@ -180,9 +180,10 @@ An extension of `serapeum:mapconcat' to include fset collections.")
 
 
 ;;; Some functions become generic functions for extensibility.
-(defgeneric lines (thing)
+(defgeneric lines (thing &key &allow-other-keys)
   (:documentation "A list of lines in THING.")
-  (:method ((string string)) (serapeum:lines string)))
+  (:method ((string string) &rest args &key)
+    (apply #'serapeum:lines string args)))
 
 (defun compare/iterator (col1 col2)
   "Compare two FSet collections, known to be of the same size, using FSet's iterator protocol."
