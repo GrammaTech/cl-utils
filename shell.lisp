@@ -22,7 +22,7 @@
 ;;;; shell commands and common lisp streams (in some cases flowing from
 ;;;; or into files on disk).
 (uiop/package:define-package :gt/shell
-  (:use-reexport :uiop/launch-program)
+  #-ecl (:use-reexport :uiop/launch-program)
   (:use :common-lisp :alexandria :iterate :gt/misc :gt/filesystem :arrow-macros
         :cl-ppcre :flexi-streams :split-sequence)
   (:import-from :uiop/run-program :run-program)
@@ -33,11 +33,11 @@
            :shell-command-failed
            :shell
            :write-shell
-           :io-shell
-           :read-shell
-           :write-shell-file
-           :read-shell-file
-           :xz-pipe
+           #-(or windows ecl) :io-shell
+           #-(or windows ecl) :read-shell
+           #-(or windows ecl) :write-shell-file
+           #-(or windows ecl) :read-shell-file
+           #-(or windows ecl) :xz-pipe
            :escape-chars
            :split-quoted
            :escape-string
@@ -187,7 +187,8 @@ Optionally print debug information if `*shell-debug*' is non-nil."
           (ignore-shell-error () "Ignore error and continue")))
       (values stdout-str stderr-str errno))))
 
-#-windows  ; IO-SHELL not yet supported on Windows
+#-(or windows ecl)  ; IO-SHELL not yet supported on Windows or ECL
+(progn
 (defmacro io-shell ((io stream-var shell &rest args) &body body)
   "Executes BODY with STREAM-VAR holding the input or output of SHELL.
 ARGS (including keyword arguments) are passed through to `uiop:launch-program'."
@@ -231,6 +232,7 @@ ARGS (including keyword arguments) are passed through to `uiop:launch-program'"
   `(read-shell-file (,in-stream ,in-file "unxz")
      (write-shell-file (,out-stream ,out-file "xz")
        ,@body)))
+)
 
 (defun escape-chars (chars str)
   "Returns a fresh string that is the same as str, except that
