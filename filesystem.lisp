@@ -28,12 +28,14 @@
   (:import-from :uiop/filesystem :with-current-directory)
   (:import-from :uiop/stream
                 :default-temporary-directory)
+  #-ecl
   (:import-from :asdf-encodings
                 :detect-file-encoding
                 :encoding-external-format)
   (:import-from :osicat :file-permissions :pathname-as-directory)
   (:export
    :file-mime-type
+   :reasonable-external-format
    :file-to-string
    :file-to-bytes
    :with-character-output-to-file
@@ -106,23 +108,28 @@ The Unix `file' command is used, specifically \"file -b --mime-type PATH\"."
             ("jpeg" '(:image :jpeg))
             (t (file-mime-type path)))))))
 
-(defun file-to-string (filespec &key external-format)
+(defun reasonable-external-format (filespec)
+  #+ecl (declare (ignorable filespec))
+  (let ((guess #-ecl
+          (encoding-external-format
+           (detect-file-encoding filespec))
+          #+ecl :default))
+    (if (eq guess :default)
+        #+sbcl sb-impl::*default-external-format*
+        #+ecl ext:*default-external-format*
+        #+ccl ccl:*default-external-format*
+        #-(or sbcl ecl ccl) :latin-1
+        guess)))
+
+(defun file-to-string (filespec &key (external-format (reasonable-external-format filespec)))
   "Return the contents of FILESPEC as a string."
   #+ccl (declare (ignorable external-format))
   (labels
-      ((get-external-format ()
-         (or external-format
-             (let ((guess (encoding-external-format
-                            (detect-file-encoding filespec))))
-               (if (eq guess :default)
-                   #+sbcl sb-impl::*default-external-format*
-                   #+ecl ext:*default-external-format*
-                   #-(or sbcl ecl) :latin-1
-                   guess))))
-       (run-read ()
-         (let (#+sbcl (sb-impl::*default-external-format* (get-external-format))
-               #+ecl (ext:*default-external-format* (get-external-format))
-               (element-type (case (get-external-format)
+      ((run-read ()
+         (let (#+sbcl (sb-impl::*default-external-format* external-format)
+               #+ecl (ext:*default-external-format* external-format)
+               #+ccl (ccl:*default-external-format* external-format)
+               (element-type (case external-format
                                (:ascii 'base-char)
                                (t 'character))))
            (with-open-file (in filespec :element-type element-type)
