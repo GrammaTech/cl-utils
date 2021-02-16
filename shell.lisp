@@ -22,7 +22,7 @@
 ;;;; shell commands and common lisp streams (in some cases flowing from
 ;;;; or into files on disk).
 (uiop/package:define-package :gt/shell
-  #-(and ecl (not asdf3.3))
+  #-ecl
   (:use-reexport :uiop/launch-program)
   (:use :common-lisp :alexandria :iterate :gt/misc :gt/filesystem :arrow-macros
         :cl-ppcre :flexi-streams :split-sequence)
@@ -45,7 +45,7 @@
            :kill-process
            #+windows :ensure-slash
            #+windows :convert-backslash-to-slash)
-  #-(or windows (and ecl (not asdf3.3)))
+  #-(or windows ecl)
   (:export :read-shell
            :write-shell-file
            :read-shell-file
@@ -189,7 +189,7 @@ Optionally print debug information if `*shell-debug*' is non-nil."
           (ignore-shell-error () "Ignore error and continue")))
       (values stdout-str stderr-str errno))))
 
-#-(or windows (and ecl (not asdf3.3)))  ; IO-SHELL not yet supported on Windows or ECL with ASDF<3.3.
+#-(or windows ecl)  ; IO-SHELL not yet supported on Windows or ECL with ASDF<3.3.
 (progn
 (defmacro io-shell ((io stream-var shell &rest args) &body body)
   "Executes BODY with STREAM-VAR holding the input or output of SHELL.
