@@ -41,9 +41,29 @@
   (with-temporary-file-of (:pathname tmp) ""
                           (equalp (file-to-bytes tmp) #())))
 
+(defgeneric equal-modulo-leading-private (left right)
+  (:method ((left string) (right pathname))
+    (equal-modulo-leading-private left (namestring right)))
+  (:method ((left pathname) (right string))
+    (equal-modulo-leading-private (namestring left) right))
+  (:method ((left pathname) (right pathname))
+    (equal-modulo-leading-private (namestring left) (namestring right)))
+  (:method ((left list) (right list))
+    (every #'equal-modulo-leading-private left right))
+  (:method ((left string) (right string))
+    (or (equal left right)
+        (and (search "/private" left)
+             (zerop (search "/private" left))
+             (equal (subseq left (length "/private")) right))
+        (and (search "/private" right)
+             (zerop (search "/private" right))
+             (equal (subseq right (length "/private")) left)))))
+
 (deftest string-to-file-test ()
   (with-temporary-file-of (:pathname tmp) ""
-                          (is (equal (namestring (string-to-file "foo" tmp)) tmp))
+                          (is (equal-modulo-leading-private
+                               (namestring (string-to-file "foo" tmp))
+                               tmp))
                           (is (equal (file-to-string tmp) "foo"))))
 
 (deftest file-bytes-roundtrip-test ()
@@ -111,7 +131,7 @@
   (with-temporary-directory (:pathname d)
     (let ((f (merge-pathnames-as-file d "f.txt")))
       (string-to-file "" f)
-      (is (equal (list-directory d) (list f))))))
+      (is (equal-modulo-leading-private (list-directory d) (list f))))))
 
 (deftest walk-directory-test ()
   (is (handler-case (progn (walk-directory #p"*/" (constantly nil)) nil)
@@ -184,8 +204,8 @@
 (deftest shell-directory-test ()
   (multiple-value-bind (stdout stderr errno)
       (shell "pwd" :directory "/tmp/")
-    (is (equal "/tmp" (trim-whitespace stdout)))
-    (is (equal "" stderr))
+    (is (equal-modulo-leading-private "/tmp" (trim-whitespace stdout)))
+    (is (equal-modulo-leading-private "" stderr))
     (is (zerop errno))))
 
 #+windows
@@ -299,7 +319,7 @@
              (shell-command-failed () (invoke-restart 'gt/shell::ignore-shell-error nil))))
           '("" "" 3))))
 
-#-windows
+#-(or windows darwin)
 (deftest kill-process-test ()
   (is
    (with-retries (10)
