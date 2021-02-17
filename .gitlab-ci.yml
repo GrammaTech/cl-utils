@@ -3,7 +3,7 @@ variables:
   DOCKER_AUTHS: "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}"
 
 default:
-  image: $DOCKER_REGISTRY/$CI_PROJECT_PATH
+  image: $CI_REGISTRY_IMAGE
   tags: ["kubernetes", "cluster"]
   before_script:
     - cp -r $(pwd)/ /root/quicklisp/local-projects/
@@ -50,6 +50,6 @@ scheduled-build:
       /kaniko/executor
       --context=$CI_PROJECT_DIR/
       --dockerfile=$CI_PROJECT_DIR/Dockerfile
-      --destination=$DOCKER_REGISTRY/$CI_PROJECT_PATH
+      --destination=$CI_REGISTRY_IMAGE
   only:
     - schedules
