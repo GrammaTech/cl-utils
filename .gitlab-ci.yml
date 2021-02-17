@@ -27,10 +27,8 @@ test-ccl:
 
 dependents:
   stage: deploy
-  inherit:
-    default: false
-  script:
-    - "curl -X POST -F token=1a461b5961e7d178128c559ff81cdd -F ref=$CI_BUILD_REF_NAME https://git.grammatech.com/api/v4/projects/195/trigger/pipeline" # sel
+  trigger:
+    - synthesis/sel
   only:
     - master
   except:
