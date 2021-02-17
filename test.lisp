@@ -18,13 +18,6 @@
 (in-package :gt/test)
 (in-readtable :curry-compose-reader-macros)
 
-(defparameter +etc-dir+ (append (pathname-directory
-                                 #.(or *compile-file-truename*
-                                       *load-truename*
-                                       *default-pathname-defaults*))
-                                (list "test" "etc"))
-  "Path to directory holding testing artifacts.")
-
 (defroot test)
 (defsuite test "GT top-level test suite.")
 
@@ -41,8 +34,7 @@
 
 (deftest file-to-string-non-utf8-encoding ()
   #-ccl       ; CCL silently reads w/o warning despite bad encoding...
-  (is (string= (file-to-string (make-pathname :directory +etc-dir+
-                                              :defaults "latin-1.c"))
+  (is (string= (file-to-string (asdf:system-relative-pathname :gt "test/etc/latin-1.c"))
                "/* Here is a non-ASCII character: § */")))
 
 (deftest file-to-bytes-test ()
