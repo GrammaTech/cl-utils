@@ -27,8 +27,7 @@ test-ccl:
 
 dependents:
   stage: deploy
-  trigger:
-    - synthesis/sel
+  trigger: synthesis/sel
   only:
     - master
   except:
