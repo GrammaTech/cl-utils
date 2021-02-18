@@ -41,23 +41,8 @@
   (with-temporary-file-of (:pathname tmp) ""
                           (equalp (file-to-bytes tmp) #())))
 
-(defgeneric equal-modulo-leading-private (left right)
-  (:method ((left string) (right pathname))
-    (equal-modulo-leading-private left (namestring right)))
-  (:method ((left pathname) (right string))
-    (equal-modulo-leading-private (namestring left) right))
-  (:method ((left pathname) (right pathname))
-    (equal-modulo-leading-private (namestring left) (namestring right)))
-  (:method ((left list) (right list))
-    (every #'equal-modulo-leading-private left right))
-  (:method ((left string) (right string))
-    (or (equal left right)
-        (and (search "/private" left)
-             (zerop (search "/private" left))
-             (equal (subseq left (length "/private")) right))
-        (and (search "/private" right)
-             (zerop (search "/private" right))
-             (equal (subseq right (length "/private")) left)))))
+(defun equal-modulo-leading-private (left right)
+  (equal (drop-prefix "/private" left) (drop-prefix "/private" right)))
 
 (deftest string-to-file-test ()
   (with-temporary-file-of (:pathname tmp) ""
@@ -319,7 +304,7 @@
              (shell-command-failed () (invoke-restart 'gt/shell::ignore-shell-error nil))))
           '("" "" 3))))
 
-#-(or windows darwin)
+#-windows
 (deftest kill-process-test ()
   (is
    (with-retries (10)
@@ -329,7 +314,7 @@
               (proc (launch-program script :output :stream))
               (filename (read-line (process-info-output proc))))
          (is (process-alive-p proc))
-         (is (string^= "/tmp/tmp." filename))
+         #-darwin (is (string^= "/tmp/tmp." filename))
          (flet ((lsof () (length (lines (shell (format nil "lsof ~a" filename))))))
            (is (= 2 (lsof)))                 ; header line plus one process
            (kill-process proc)
