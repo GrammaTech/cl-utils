@@ -16,7 +16,7 @@
 ;;;; dumping profiling information into a format usably for the
 ;;;; generation of flame graphs (see http://oprofile.sourceforge.net/news/)
 (uiop/package:define-package :gt/profile
-  (:use :common-lisp :alexandria :iterate :gt/misc :arrow-macros
+  (:use :common-lisp :alexandria :iterate :gt/misc
         :cl-ppcre :split-sequence
         :named-readtables :curry-compose-reader-macros)
   (:import-from :cl-dot)
