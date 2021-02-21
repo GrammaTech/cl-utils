@@ -8,6 +8,7 @@
         :gt/filesystem
         :gt/misc
         :gt/shell
+        :serapeum
         #+gt :testbot)
   #+gt (:shadowing-import-from :testbot :batch-test)
   (:import-from :serapeum :trim-whitespace :string^=)
