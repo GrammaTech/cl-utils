@@ -8,12 +8,12 @@
         :gt/filesystem
         :gt/misc
         :gt/shell
-        :serapeum
         #+gt :testbot)
   #+gt (:shadowing-import-from :testbot :batch-test)
   (:import-from :serapeum :trim-whitespace :string^=)
   (:import-from :gt :equal? :lines)
   (:import-from :fset :seq)
+  (:import-from :serapeum :drop-prefix)
   (:shadowing-import-from :fset :set)
   (:export :test :batch-test :testbot-test))
 (in-package :gt/test)
