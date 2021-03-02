@@ -40,7 +40,9 @@
   ;; We want defmethod to always signal a style warning if there is no
   ;; generic function.
   (:shadow :defmethod)
-  (:shadowing-import-from :functional-trees :mapcar :mapc)
+  (:shadowing-import-from :functional-trees
+                          :mapcar :mapc
+                          :subst :subst-if :subst-if-not)
   (:shadowing-import-from :fset
                           :@
                           :unionf :appendf :with :removef :size :complement
