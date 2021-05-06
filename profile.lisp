@@ -111,16 +111,13 @@ See http://www.brendangregg.com/FlameGraphs/cpuflamegraphs.html."
 
       (sb-sprof::with-lookup-tables ()
         (loop :for start = 0 :then end
-           :while (< start (length samples))
-           :for end = (or (position 'sb-sprof::trace-start samples
-                                    :start (1+ start)
-                                    :key (lambda (it) (and (listp it) (car it))))
-                          (return))
+           :while (and start (< start (length samples)))
+           :for end = (position 'sb-sprof::trace-start samples :start (1+ start))
+           :when end
            :do (let ((key
                       (sb-sprof::with-output-to-string (stream)
                         (loop :for i :from (- end 2) :downto (+ start 2) :by 2
-                           :for node = (sb-sprof::lookup-node
-                                        (aref samples i))
+                           :for node = (sb-sprof::lookup-node (aref samples i))
                            :when node
                            :do (let ((*print-pretty* nil))
                                  (format stream "~A;"
