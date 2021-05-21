@@ -60,13 +60,14 @@
   (sb-sprof::node-callers object))
 
 #+sbcl
-(defun profile-to-dot-graph (stream)
+(defun profile-to-dot-graph (stream &aux (samples sb-sprof::*samples*))
   "Write profile to STREAM."
   (progn
-    (unless sb-sprof::*samples*
+    (unless samples
       (warn "; `profile-to-dot-graph': No samples to report.")
       (return-from profile-to-dot-graph))
-    (let ((call-graph (sb-sprof::make-call-graph most-positive-fixnum)))
+    (let ((call-graph
+           (sb-sprof::make-call-graph samples most-positive-fixnum)))
       (cl-dot:print-graph
        (cl-dot:generate-graph-from-roots
         call-graph
