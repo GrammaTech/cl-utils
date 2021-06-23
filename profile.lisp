@@ -113,7 +113,7 @@ See http://www.brendangregg.com/FlameGraphs/cpuflamegraphs.html."
       (sb-sprof::with-lookup-tables ()
         (loop :for start = 0 :then end
            :while (and start (< start (length samples)))
-              :for end = (position 'sb-sprof::trace-start samples
+           :for end = (position 'sb-sprof::trace-start samples
                                    :start (1+ start)
                                    :key (lambda (it)
                                           (if (listp it) (car it) it)))
