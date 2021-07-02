@@ -767,3 +767,37 @@
   (is (not (weak-equal? (seq 1) (set 1))))
   (is (not (weak-equal? (set 1) (fset:bag 1))))
   (is (not (weak-equal? (fset:map (:x 1)) (fset:bag :x)))))
+
+(deftest copy-file-with-attributes-test ()
+  (let ((permissions '(:USER-READ :USER-WRITE :USER-EXEC
+                       :GROUP-READ :GROUP-EXEC :OTHER-READ :OTHER-EXEC))
+        (access-time 1625150495)
+        (modify-time 1625150491)
+        (file-contents "hello"))
+    (with-temporary-file (:pathname file1)
+      (with-temporary-file (:pathname file2)
+        (with-open-file (os file1 :direction :output :if-exists :supersede)
+          (format os "~A~%" file-contents))
+        (setf (osicat:file-permissions file1) permissions)
+        (gt/filesystem::utimes file1 access-time modify-time)
+        ;; copy the file
+        (copy-file-with-attributes file1 file2)
+        ;; make sure file2 contains the data, correct times, and permissions
+
+        ;; check that times and permissions are the same
+        (let ((stat1 (osicat-posix:stat file1))
+              (stat2 (osicat-posix:stat file2)))
+          (is (= (osicat-posix:stat-atime stat1)
+                 (osicat-posix:stat-atime stat2)))
+          (is (= (osicat-posix:stat-mtime stat1)
+                 (osicat-posix:stat-mtime stat2)))
+          (is (= (osicat-posix:stat-mode stat1)
+                 (osicat-posix:stat-mode stat2)))
+          (is (equal (osicat:file-permissions file1)
+                 (osicat:file-permissions file2))))
+        ;; check that data is the same
+        (with-open-file (is1 file2 :direction :input)
+          (with-open-file (is2 file1 :direction :input)
+            (is (= (file-length is1) (file-length is2))) ; file lengths equal?
+            (is (and (string= (read-line is1) file-contents)
+                     (string= (read-line is2) file-contents)))))))))

@@ -610,23 +610,31 @@ supported on all platforms.  See LIST-DIRECTORY."
 
 #-win32
 (progn
-(osicat-posix::defsyscall ("utimes" %utimes) :int
-  "Set access time, modify time."
-  (path osicat-sys:filename-designator)
+(cffi:defcfun ("utimes" %utimes :convention :cdecl :library :default)
+    :int
+  (path :string)
   (times :pointer))
 
-(defun utimes (path access-time modify-time)
-  "Set access time, modify time of os file."
+(defun utimes (path access-time modify-time
+               &optional (access-time-nsec 0) (modify-time-nsec 0))
+  "Set access time, modify time of os file. These are the standard
+ times with resolution of 1 second (as returned by 'stat'). You can optionally
+ provide the nanosecond part of access time and modify time."
   (cffi:with-foreign-object (array '(:struct osicat-posix::timeval) 2)
     (setf (cffi:mem-aref array :long 0) access-time)
-    (setf (cffi:mem-aref array :long 1) 0)
+    (setf (cffi:mem-aref array :long 1) access-time-nsec)
     (setf (cffi:mem-aref array :long 2) modify-time)
-    (setf (cffi:mem-aref array :long 0) 0)  
-    (%utimes path array)))
+    (setf (cffi:mem-aref array :long 3) modify-time-nsec)
+    (%utimes (namestring path) array)))
 
-(defun copy-file-with-attributes (old new)
-  "Copy an os file from old path to new, maintaining permissions,
- owner, group and access/modify dates."
+(defun copy-file-with-attributes (old new
+                                  &key (permissions t)
+                                    (user nil)
+                                    (group t)
+                                    (times t))
+  "Copy an os file from old path to new, optionally maintaining permissions,
+ owner, group and access/modify times. By default all attributes are copied,
+ except user, as changing the user usually requires root privilege."
   ;; copy the file bytes
   (with-open-file (is old :direction :input :element-type 'unsigned-byte)
     (with-open-file (os new :direction :output :element-type 'unsigned-byte
@@ -634,24 +642,34 @@ supported on all platforms.  See LIST-DIRECTORY."
       (do ((x (read-byte is nil nil)(read-byte is nil nil)))
           ((null x))
         (write-byte x os))))
-  ;; copy file permissions
-  (setf (osicat:file-permissions new) (osicat:file-permissions old))
+  ;; optionally copy file permissions
+  (if permissions
+    (setf (osicat:file-permissions new) (osicat:file-permissions old)))
   ;; preserve user, group
   (let* ((stat (osicat-posix:stat old))
          (uid (osicat-posix:stat-uid stat))
          (gid (osicat-posix:stat-gid stat))
          (atime (osicat-posix:stat-atime stat))
          (mtime (osicat-posix:stat-mtime stat)))
-    (osicat-posix::chown new uid gid)
-    ;; copy modify dates
-    (utimes new atime mtime)))
+    (cond ((and user group)(osicat-posix::chown new uid gid))
+          ((or user group)
+           (let ((stat-new (osicat-posix:stat new)))
+             (if user
+                 ;; preserve user, keep new group
+                 (osicat-posix::chown new uid (osicat-posix:stat-gid stat-new))
+                 ;; else preserver group, keep new user
+                 (osicat-posix::chown new
+                                      (osicat-posix:stat-uid stat-new) gid)))))
+    ;; copy access/modify times -- we truncate nanoseconds to
+    ;; zero because OSICAT:STAT function does not provide these on linux
+    (if times
+      (utimes new atime mtime 0 0))))
 ) ; #-win32
 
 #+win32
-;; TODO--implement attribute copy for windows
+;; TODO--implement attribute copy for windows, for now just copy data
 (defun copy-file-with-attributes (old new)
-  "Copy an os file from old path to new, maintaining permissions,
- owner, group and access/modify dates."
+  "Copy an os file from old path to new."
   ;; copy the file bytes
   (with-open-file (is old :direction :input :element-type 'unsigned-byte)
     (with-open-file (os new :direction :output :element-type 'unsigned-byte
