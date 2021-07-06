@@ -657,7 +657,7 @@ supported on all platforms.  See LIST-DIRECTORY."
              (if user
                  ;; preserve user, keep new group
                  (osicat-posix::chown new uid (osicat-posix:stat-gid stat-new))
-                 ;; else preserver group, keep new user
+                 ;; else preserve group, keep new user
                  (osicat-posix::chown new
                                       (osicat-posix:stat-uid stat-new) gid)))))
     ;; copy access/modify times -- we truncate nanoseconds to
