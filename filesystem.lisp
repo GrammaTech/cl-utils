@@ -287,8 +287,10 @@ for compatability purposes with `uiop/stream:with-temporary-file`."
   (once-only (keep)
     `(let* ((,pathname (temp-file-name :directory ,directory :type ,type)))
        (unwind-protect (progn ,@body)
-         (unless ,keep
-           (delete-path ,pathname))))))
+         (locally (declare #+sbcl (sb-ext:muffle-conditions
+                                   sb-ext:code-deletion-note))
+           (unless ,keep
+             (delete-path ,pathname)))))))
 
 (defmacro with-temporary-file-of
     ((&rest args &key (pathname (gensym "PATHNAME")) &allow-other-keys)
