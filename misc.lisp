@@ -82,6 +82,8 @@
            :tails
            :pairs
            :mapcar-improper-list
+           :extendable-string
+           :time-as-string
            ;; hash tables
            :make-thread-safe-hash-table
            :random-hash-table-key
@@ -597,3 +599,22 @@ not work on circular lists."
   (let ((size (hash-table-count hash-tbl)))
     (unless (zerop size)
       (find-hash-table-element hash-tbl (random size)))))
+
+(defun extendable-string (s)
+  "Given an initial string (may be empty), return an extendable (adjustable)
+ string initialized to passed contents."
+  (make-array (length s)
+              :element-type 'character
+              :initial-contents s
+              :fill-pointer (length s)
+              :adjustable t))
+
+(defmacro time-as-string (form)
+  "Returns values which result from evaluation of form, with 1 additional value:
+ the timing info as obtained from the TIME macro (as a string)."
+  (with-gensyms (sym xstr vals)
+    `(let ((,xstr (extendable-string "")))
+       (with-output-to-string (,sym ,xstr)
+         (let* ((*trace-output* ,sym)
+                (,vals (multiple-value-list (time ,form))))
+           (apply 'values (append ,vals (list (trim-whitespace ,xstr)))))))))
