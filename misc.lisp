@@ -17,7 +17,8 @@
         :iterate
         :named-readtables
         :curry-compose-reader-macros)
-  (:import-from :serapeum :mapconcat :drop-while :take-while :plist-keys)
+  (:import-from :serapeum :mapconcat :drop-while :take-while :plist-keys
+   :trim-whitespace)
   (:import-from :uiop/utility :with-muffled-conditions)
   (:import-from :uiop/image :quit :*lisp-interaction*)
   #+sbcl
@@ -612,9 +613,10 @@ not work on circular lists."
 (defmacro time-as-string (form)
   "Returns values which result from evaluation of form, with 1 additional value:
  the timing info as obtained from the TIME macro (as a string)."
-  (with-gensyms (sym xstr vals)
+  (with-gensyms (sym xstr)
     `(let ((,xstr (extendable-string "")))
        (with-output-to-string (,sym ,xstr)
-         (let* ((*trace-output* ,sym)
-                (,vals (multiple-value-list (time ,form))))
-           (apply 'values (append ,vals (list (trim-whitespace ,xstr)))))))))
+         (let* ((*trace-output* ,sym))
+           (multiple-value-call #'values (time ,form)
+             (progn (finish-output ,sym) (trim-whitespace ,xstr))))))))
+
