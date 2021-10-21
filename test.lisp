@@ -801,3 +801,26 @@
             (is (= (file-length is1) (file-length is2))) ; file lengths equal?
             (is (and (string= (read-line is1) file-contents)
                      (string= (read-line is2) file-contents)))))))))
+
+(deftest extendable-string-test ()
+  (let ((xstr (extendable-string "san francisco")))
+    (dotimes (i 10) (vector-push-extend #\x xstr))
+    (is (string-equal "san franciscoxxxxxxxxxx" xstr))
+    (is (adjustable-array-p xstr))
+    (is (array-has-fill-pointer-p xstr))))
+
+(deftest time-as-string-test ()
+  (multiple-value-bind (result time)
+    (time-as-string
+     (dotimes (i 1000 'foo) (cons i i)))
+    (is (stringp time))
+    (is (> (length time) 0))
+    (is (eq result 'foo)))
+  (multiple-value-bind (a b c time)
+      (time-as-string
+       (values 10 20 30))
+    (is (eql a 10))
+    (is (eql b 20))
+    (is (eql c 30))
+    (is (stringp time))
+    (is (> (length time) 0))))
