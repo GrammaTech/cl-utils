@@ -359,7 +359,7 @@ correspondingly to those in `with-temporary-file`."
 
 #+sbcl
 (locally (declare (sb-ext:muffle-conditions sb-ext:compiler-note))
-  (sb-alien:define-alien-routine (#-win32 "tempnam" #+win32 "_tempnam" tempnam)
+  (sb-alien:define-alien-routine (#-windows "tempnam" #+windows "_tempnam" tempnam)
       sb-alien:c-string
     (dir sb-alien:c-string)
     (prefix sb-alien:c-string)))
@@ -610,7 +610,7 @@ supported on all platforms.  See LIST-DIRECTORY."
     (uiop/os:chdir pathname)
     (setf *default-pathname-defaults* pathname)))
 
-#-win32
+#-windows
 (progn
 (cffi:defcfun ("utimes" %utimes :convention :cdecl :library :default)
     :int
@@ -666,9 +666,9 @@ supported on all platforms.  See LIST-DIRECTORY."
     ;; zero because OSICAT:STAT function does not provide these on linux
     (if times
       (utimes new atime mtime 0 0))))
-) ; #-win32
+) ; #-windows
 
-#+win32
+#+windows
 ;; TODO--implement attribute copy for windows, for now just copy data
 (defun copy-file-with-attributes (old new)
   "Copy an os file from old path to new."
