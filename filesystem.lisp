@@ -32,7 +32,7 @@
   (:import-from :asdf-encodings
                 :detect-file-encoding
                 :encoding-external-format)
-  (:import-from :osicat :file-permissions :pathname-as-directory)
+  #-windows (:import-from :osicat :file-permissions :pathname-as-directory)
   (:export
    :file-mime-type
    :reasonable-external-format
