@@ -182,6 +182,11 @@
                  count)
                2)))))
 
+(deftest pathname-relativize-test ()
+  (is (equal (pathname-relativize "/" "/foo") "foo"))
+  (is (equal (pathname-relativize #p"/" "/foo") "foo"))
+  (is (equal (pathname-relativize "/bar/" "/foo/bar/x.y") "/foo/bar/x.y")))
+
 (deftest which-test ()
   (is (null (which "dsjafpoarue")))
   (is (not (null (which #-windows "ls" #+windows "cmd.exe")))))

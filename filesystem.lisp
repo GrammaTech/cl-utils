@@ -588,11 +588,23 @@ supported on all platforms.  See LIST-DIRECTORY."
 
 ;; Other pathname utilities (delete?)
 (defun pathname-relativize (root-path path)
-  "Return PATH relative to ROOT-PATH."
-  (string-replace-all
-   (namestring (canonical-pathname (ensure-directory-pathname root-path)))
-   (namestring (canonical-pathname path))
-   ""))
+  "Return namestring of PATH relative to ROOT-PATH.  If ROOT-PATH's
+directory is not a prefix of PATH, there is no effect.  ROOT-PATH or
+PATH may be either pathnames or namestrings of pathnames."
+  (let* ((path (canonical-pathname path))
+         (root-dir (pathname-directory
+                    (canonical-pathname
+                     (ensure-directory-pathname root-path))))
+         (path-dir (pathname-directory path))
+         (root-dir-len (length root-dir)))
+    (namestring
+     (if (and (<= root-dir-len (length path-dir))
+              (every #'equal root-dir path-dir)
+              (equal (pathname-device root-path)
+                     (pathname-device path)))
+         (make-pathname :defaults path
+                        :directory (cons :relative (subseq path-dir root-dir-len)))
+         path))))
 
 (defun directory-p (pathname)
   "Return a directory version of PATHNAME if it indicates a directory."
