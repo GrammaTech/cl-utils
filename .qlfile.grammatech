@@ -1,3 +1,4 @@
 git stefil+ https://github.com/GrammaTech/stefil-.git main
 git functional-trees https://git.grammatech.com/synthesis/functional-trees.git
 git testbot https://git.grammatech.com/synthesis/testbot.git
+git serapeum https://github.com/ruricolist/serapeum
