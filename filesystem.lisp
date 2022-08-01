@@ -131,7 +131,7 @@ The Unix `file' command is used, specifically \"file -b --mime-type PATH\"."
                #+ecl (ext:*default-external-format* external-format)
                #+ccl (ccl:*default-external-format* external-format)
                (element-type (case external-format
-                               (:ascii 'base-char)
+                               ((:ascii :us-ascii) 'base-char)
                                (t 'character))))
            (with-open-file (in filespec :element-type element-type)
              (let* ((file-bytes (file-length in))
