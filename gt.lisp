@@ -45,7 +45,7 @@
                           :subst :subst-if :subst-if-not)
   (:shadowing-import-from :fset
                           :@
-                          :unionf :appendf :with :removef :size :complement
+                          :unionf :appendf :prependf :with :removef :size :complement
                           ;; Shadowed type/constructor names.
                           :set
                           ;; Shadowed sequence operations.
