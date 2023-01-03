@@ -4,7 +4,7 @@ variables:
 
 default:
   image: $CI_REGISTRY_IMAGE
-  tags: ["kubernetes", "cluster"]
+  tags: [shared]
   before_script:
     - cp -r $(pwd)/ /root/quicklisp/local-projects/
 
