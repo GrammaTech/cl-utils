@@ -69,7 +69,19 @@
 
 (deftest canonical-pathname-test ()
   (is (equal (namestring (canonical-pathname #p"")) ""))
-  (is (equal (canonical-pathname #p"foo/") #p"foo/")))
+  (is (equal (canonical-pathname #p"foo/") #p"foo/"))
+  (is (equal (canonical-pathname #p"bar/../foo/") #p"foo/"))
+  (let ((p #p"bar/../foo/"))
+    (is (equal #p"foo/"
+               (canonical-pathname
+                (make-pathname
+                 :directory (substitute :up :back (pathname-directory p))
+                 :defaults p))))
+    (is (equal #p"foo/"
+               (canonical-pathname
+                (make-pathname
+                 :directory (substitute :back :up (pathname-directory p))
+                 :defaults p))))))
 
 (deftest merge-pathname-as-directory-test ()
   (is (equal (merge-pathnames-as-directory) #p""))

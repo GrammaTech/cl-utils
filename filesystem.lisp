@@ -443,7 +443,7 @@ correspondingly to those in `with-temporary-file`."
         (while full-dir)
         (cond ((string= "." (first full-dir))
                (pop full-dir))
-              ((eql :back (second full-dir))
+              ((member (second full-dir) '(:back :up))
                (pop full-dir)
                (pop full-dir))
               (t (push (pop full-dir) canon-dir)))
