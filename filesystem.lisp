@@ -437,18 +437,35 @@ correspondingly to those in `with-temporary-file`."
   "Remove redundant information from PATH."
   (iter (with full-dir = (or (pathname-directory (pathname path))
                              (list :relative)))
-        (with canon-dir = (if (member (first full-dir) '(:relative :absolute))
-                              (list (pop full-dir))
-                              (list :relative)))
+        (with canon-dir-kind = (if (member (first full-dir) '(:relative :absolute))
+                                   (pop full-dir)
+                                   :relative))
+        (with canon-dir = nil)
         (while full-dir)
         (cond ((string= "." (first full-dir))
                (pop full-dir))
-              ((member (second full-dir) '(:back :up))
-               (pop full-dir)
-               (pop full-dir))
+              ((member (first full-dir) '(:back :up))
+               (if canon-dir
+                   (if (member (first canon-dir) '(:back :up))
+                       (progn
+                         (assert (eql canon-dir-kind :relative))
+                         (push (pop full-dir) canon-dir))
+                       (progn
+                         (pop full-dir)
+                         (pop canon-dir)))
+                   (ecase canon-dir-kind
+                     ;; Drop .. at the beginning of an absolute pathname.
+                     (:absolute
+                      (pop full-dir))
+                     ;; Preserve .. at the beginning of a relative
+                     ;; pathname.
+                     (:relative
+                      (push (pop full-dir) canon-dir)))))
               (t (push (pop full-dir) canon-dir)))
         (finally (return (make-pathname :defaults (pathname path)
-                                        :directory (nreverse canon-dir))))))
+                                        :directory
+                                        (cons canon-dir-kind
+                                              (nreverse canon-dir)))))))
 
 (defun merge-pathnames-as-directory (&rest pathnames)
   "Given a list of pathnames, this returns a single

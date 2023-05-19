@@ -81,7 +81,25 @@
                (canonical-pathname
                 (make-pathname
                  :directory (substitute :back :up (pathname-directory p))
-                 :defaults p))))))
+                 :defaults p)))))
+  ;; Handle repeated ..
+  (is (equal (canonical-pathname
+              #p"/usr/bin/../lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9")
+             #p"/usr/include/c++/9"))
+  ;; Keep .. at the beginning of a relative pathname.
+  (is (equal (canonical-pathname #p"../x/y")
+             #p"../x/y"))
+  (is (equal (canonical-pathname #p"../../../x/")
+             (canonical-pathname #p"../../../x/")))
+  (is (equal (canonical-pathname #p"x/../../y")
+             (canonical-pathname #p"../y")))
+  (is (equal (canonical-pathname #p"x/../../../y")
+             (canonical-pathname #p"../../y")))
+  ;; Drop .. at the beginning of an absolute pathhname.
+  (is (equal (canonical-pathname #P"/../x/")
+             #p"/x/"))
+  (is (equal (canonical-pathname #p"/../../../x/")
+             (canonical-pathname #p"/x/"))))
 
 (deftest merge-pathname-as-directory-test ()
   (is (equal (merge-pathnames-as-directory) #p""))
