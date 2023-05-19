@@ -444,23 +444,22 @@ correspondingly to those in `with-temporary-file`."
         (while full-dir)
         (cond ((string= "." (first full-dir))
                (pop full-dir))
-              ((member (first full-dir) '(:back :up))
-               (if canon-dir
-                   (if (member (first canon-dir) '(:back :up))
-                       (progn
-                         (assert (eql canon-dir-kind :relative))
-                         (push (pop full-dir) canon-dir))
-                       (progn
-                         (pop full-dir)
-                         (pop canon-dir)))
-                   (ecase canon-dir-kind
-                     ;; Drop .. at the beginning of an absolute pathname.
-                     (:absolute
-                      (pop full-dir))
-                     ;; Preserve .. at the beginning of a relative
-                     ;; pathname.
-                     (:relative
-                      (push (pop full-dir) canon-dir)))))
+              ((not (member (first full-dir) '(:back :up)))
+               (push (pop full-dir) canon-dir))
+              ;; Handling for ../
+              ((member (first canon-dir) '(:back :up))
+               (assert (eql canon-dir-kind :relative))
+               (push (pop full-dir) canon-dir))
+              (canon-dir
+               (pop full-dir)
+               (pop canon-dir))
+              ;; Drop .. at the beginning of an absolute pathname.
+              ((eql canon-dir-kind :absolute)
+               (pop full-dir))
+              ;; Preserve .. at the beginning of a relative
+              ;; pathname.
+              ((eql canon-dir-kind :relative)
+               (push (pop full-dir) canon-dir))
               (t (push (pop full-dir) canon-dir)))
         (finally (return (make-pathname :defaults (pathname path)
                                         :directory
