@@ -17,6 +17,7 @@
         :iterate
         :named-readtables
         :curry-compose-reader-macros)
+  (:import-from :functional-trees :copy)
   (:import-from :serapeum :mapconcat :drop-while :take-while :plist-keys
    :trim-whitespace :op)
   (:import-from :uiop/utility :with-muffled-conditions)
