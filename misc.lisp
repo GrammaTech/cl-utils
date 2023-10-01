@@ -19,7 +19,7 @@
         :curry-compose-reader-macros)
   (:import-from :functional-trees :copy)
   (:import-from :serapeum :mapconcat :drop-while :take-while :plist-keys
-   :trim-whitespace :op)
+                :trim-whitespace :op :take-until :drop-until)
   (:import-from :uiop/utility :with-muffled-conditions)
   (:import-from :uiop/image :quit :*lisp-interaction*)
   #+sbcl
@@ -458,12 +458,6 @@ occurences of the part is replaced with replacement."))
     ((cdr list) (interleave (cdr list) sep (cons sep (cons (car list) rest))))
     (list (reverse (cons (car list) rest)))
     (t nil)))
-
-(defun drop-until (pred seq)
-  (drop-while (complement pred) seq))
-
-(defun take-until (pred seq)
-  (take-while (complement pred) seq))
 
 (defun pad (list n &optional (elem nil))
   "Pad LIST to a length of N with ELEM"
