@@ -81,7 +81,8 @@
            :set-collect
            :seq-collect
            :map-collect
-           :alist))
+           :alist
+           :with-thread-name))
 ;;; NOTE: *Consider* including Generic-cl less its new seq. stuff.
 (in-package :gt)
 
@@ -179,6 +180,26 @@ An extension of `serapeum:mapconcat' to include fset collections.")
 (defun parse-numbers (string &key (radix 10) (delim #\Space))
   (mapcar #'(lambda (num) (parse-integer num :radix radix))
           (split-sequence delim string :remove-empty-subseqs t)))
+
+(defmacro with-thread-name ((&key name) &body body)
+  "Run BODY with NAME appended to the name of the current thread.
+This makes it easy to see which thread is doing what in thread
+listings (and, if the Lisp supports it, with external utilities like
+`top')."
+  (with-thunk (body)
+    `(call/thread-name ,body ,name)))
+
+(defun call/thread-name (fn name)
+  #-sbcl (funcall fn)
+  #+sbcl
+  (let* ((thread (bt:current-thread))
+         (old-name (bt:thread-name thread)))
+    (unwind-protect
+         (progn
+           (setf (sb-thread:thread-name thread)
+                 (fmt "~a (~a)" old-name name))
+           (funcall fn))
+      (setf (sb-thread:thread-name thread) old-name))))
 
 
 ;;; Some functions become generic functions for extensibility.
