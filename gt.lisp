@@ -29,6 +29,7 @@
   (:shadowing-import-from :alexandria
                           :compose)     ; Shadow fset:compose.
   (:shadow :alist)       ; Shadow fset:alist and trivia:alist.
+  (:shadowing-import-from :trivia :plist)
   (:shadowing-import-from :iterate
                           ;; Shadow serapeum macros.
                           :summing :collecting :sum :in)
