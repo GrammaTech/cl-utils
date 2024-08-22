@@ -19,8 +19,8 @@ exec ${CCL_DEFAULT_DIRECTORY}/lx86cl64 "$@"\n\
     cd /tmp && \
     git clone https://github.com/Clozure/ccl.git && \
     cd ccl && \
-    git checkout v1.12 && \
-    wget https://github.com/Clozure/ccl/releases/download/v1.12/linuxx86.tar.gz && \
+    git checkout v1.12.1 && \
+    wget https://github.com/Clozure/ccl/releases/download/v1.12.1/linuxx86.tar.gz && \
     tar xzvf linuxx86.tar.gz -C . && \
     echo "(ccl:rebuild-ccl :full t)" | ./lx86cl64 --no-init --quiet --batch; \
     cp -pr /tmp/ccl/* /usr/lib/ccl && \
