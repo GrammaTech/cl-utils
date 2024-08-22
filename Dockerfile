@@ -26,4 +26,8 @@ exec ${CCL_DEFAULT_DIRECTORY}/lx86cl64 "$@"\n\
     cp -pr /tmp/ccl/* /usr/lib/ccl && \
     rm -rf /tmp/ccl
 
+# Install pre-release version of ASDF needed for CCL package-local nicknames
+RUN mkdir /root/common-lisp
+RUN curl https://gitlab.common-lisp.net/asdf/asdf/-/archive/3.3.7/asdf-3.3.7.tar.gz| tar xzC /root/common-lisp
+
 WORKDIR /root/quicklisp/local-projects/
