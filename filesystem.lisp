@@ -19,6 +19,8 @@
 (uiop/package:define-package :gt/filesystem
   (:use-reexport :uiop/filesystem :uiop/pathname)
   (:use :common-lisp :alexandria :serapeum :iterate)
+  (:local-nicknames
+   (:file :org.shirakumo.file-attributes))
   (:shadowing-import-from :iterate
                           ;; Shadow serapeum macros.
                           :summing :collecting :sum :in)
@@ -32,7 +34,6 @@
   (:import-from :asdf-encodings
                 :detect-file-encoding
                 :encoding-external-format)
-  #-windows (:import-from :osicat :file-permissions :pathname-as-directory)
   (:export
    :file-mime-type
    :reasonable-external-format
@@ -309,8 +310,14 @@ bound to PATHNAME.  Additional keyword args are passed thru to
 Additional keyword args are passed thru to `with-temporary-file`."
   `(with-temporary-file (,@args)
      (delete-path ,pathname)
-     #-windows (osicat-posix:mkfifo ,pathname (logior osicat-posix:s-iwusr
-                                                      osicat-posix:s-irusr))
+     #-windows
+     (progn
+       #+sbcl
+       (sb-posix:mkfifo ,pathname
+                        (logior sb-posix:s-iwusr
+                                sb-posix:s-irusr))
+       #+ccl
+       (#_mkfifo ,pathname (logior #$S_IWUSR #$S_IRUSR)))
      ,@body))
 
 (defmacro with-temporary-directory
@@ -603,6 +610,36 @@ supported on all platforms.  See LIST-DIRECTORY."
 
 
 ;; Other pathname utilities (delete?)
+
+(defsubst pathname-as-directory (pathname)
+  "Alias for `uiop:ensure-directory-pathname'."
+  (uiop:ensure-directory-pathname pathname))
+
+(def +key-translations+
+  '((:owner-read . :user-read)
+    (:owner-write . :user-write)
+    (:owner-execute . :user-exec)))
+
+(defun file-permissions (pathname)
+  "Wrap `org.shirakumo.attributes' for compatibility with
+`osicat:file-permissions'."
+  (let ((attrs (file:decode-attributes (file:attributes pathname))))
+    (iter (for (key value . nil) on attrs by #'cddr)
+          (when value
+            (collect (or (assocdr key +key-translations+)
+                         key))))))
+
+(defun (setf file-permissions) (value pathname)
+  "Wrap `org.shirakumo.attributes' for compatibility with
+`osicat:file-permissions'."
+  (let ((attrs-plist
+          (iter (for key in value)
+                (collect (or (rassocar key +key-translations+)
+                             key))
+                (collect t))))
+    (setf (file:attributes pathname)
+          (file:encode-attributes attrs-plist))))
+
 (defun pathname-relativize (root-path path)
   "Return namestring of PATH relative to ROOT-PATH.  If ROOT-PATH's
 directory is not a prefix of PATH, there is no effect.  ROOT-PATH or
@@ -638,24 +675,13 @@ PATH may be either pathnames or namestrings of pathnames."
     (uiop/os:chdir pathname)
     (setf *default-pathname-defaults* pathname)))
 
-#-windows
-(progn
-(cffi:defcfun ("utimes" %utimes :convention :cdecl :library :default)
-    :int
-  (path :string)
-  (times :pointer))
-
 (defun utimes (path access-time modify-time
                &optional (access-time-nsec 0) (modify-time-nsec 0))
   "Set access time, modify time of os file. These are the standard
  times with resolution of 1 second (as returned by 'stat'). You can optionally
  provide the nanosecond part of access time and modify time."
-  (cffi:with-foreign-object (array '(:struct osicat-posix::timeval) 2)
-    (setf (cffi:mem-aref array :long 0) access-time)
-    (setf (cffi:mem-aref array :long 1) access-time-nsec)
-    (setf (cffi:mem-aref array :long 2) modify-time)
-    (setf (cffi:mem-aref array :long 3) modify-time-nsec)
-    (%utimes (namestring path) array)))
+  (setf (file:access-time path) access-time
+        (file:modification-time path) modify-time))
 
 (defun copy-file-with-attributes (old new
                                   &key (permissions t)
@@ -673,37 +699,27 @@ PATH may be either pathnames or namestrings of pathnames."
           ((null x))
         (write-byte x os))))
   ;; optionally copy file permissions
-  (if permissions
-    (setf (osicat:file-permissions new) (osicat:file-permissions old)))
+  (when permissions
+    (setf (file-permissions new) (file-permissions old)))
   ;; preserve user, group
-  (let* ((stat (osicat-posix:stat old))
-         (uid (osicat-posix:stat-uid stat))
-         (gid (osicat-posix:stat-gid stat))
-         (atime (osicat-posix:stat-atime stat))
-         (mtime (osicat-posix:stat-mtime stat)))
-    (cond ((and user group)(osicat-posix::chown new uid gid))
+  (let* ((old-uid (file:owner old))
+         (old-gid (file:group old))
+         (atime (file:access-time old))
+         (mtime (file:modification-time old)))
+    (cond ((and user group)
+           (setf (file:owner new) old-uid
+                 (file:group new) old-gid))
           ((or user group)
-           (let ((stat-new (osicat-posix:stat new)))
-             (if user
-                 ;; preserve user, keep new group
-                 (osicat-posix::chown new uid (osicat-posix:stat-gid stat-new))
-                 ;; else preserve group, keep new user
-                 (osicat-posix::chown new
-                                      (osicat-posix:stat-uid stat-new) gid)))))
+           (let ((new-gid (file:group new))
+                 (new-uid (file:owner new)))
+             (setf (values (file:owner new)
+                           (file:group new))
+                   (if user
+                       ;; preserve user, keep new group
+                       (values old-uid new-gid)
+                       ;; else preserve group, keep new user
+                       (values new-uid old-gid))))))
     ;; copy access/modify times -- we truncate nanoseconds to
-    ;; zero because OSICAT:STAT function does not provide these on linux
-    (if times
-      (utimes new atime mtime 0 0))))
-) ; #-windows
-
-#+windows
-;; TODO--implement attribute copy for windows, for now just copy data
-(defun copy-file-with-attributes (old new)
-  "Copy an os file from old path to new."
-  ;; copy the file bytes
-  (with-open-file (is old :direction :input :element-type 'unsigned-byte)
-    (with-open-file (os new :direction :output :element-type 'unsigned-byte
-                            :if-exists :supersede)
-      (do ((x (read-byte is nil nil)(read-byte is nil nil)))
-          ((null x))
-        (write-byte x os)))))
+    ;; zero.
+    (when times
+      (utimes new atime mtime))))

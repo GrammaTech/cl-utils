@@ -10,3 +10,4 @@
   :perform (test-op (o c) (symbol-call :gt/test '#:run-batch)))
 
 (register-system-packages "misc-extensions" '(:gmap))
+(register-system-packages "file-attributes" '(:org.shirakumo.file-attributes))
