@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 
 RUN apt-get -y update && \
     apt-get -y install autoconf build-essential git lsof wget python3-pip sbcl curl
