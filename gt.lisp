@@ -238,7 +238,14 @@ listings (and, if the Lisp supports it, with external utilities like
   (:method ((a bag) (b bag))
     (compare/iterator a b))
   (:method ((a fset:tuple) (b fset:tuple))
-    (compare/iterator a b))
+    (and
+     (= (size a) (size b))
+     (do-tuple (k v1 a t)
+       (multiple-value-bind (v2 v2?)
+           (lookup b k)
+         (unless (and v2?
+                      (equal? v1 v2))
+           (return-from equal? nil))))))
   (:method ((a sequence) (b sequence))
     (and (length= a b)
          (every #'equal? a b)))

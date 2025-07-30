@@ -11,7 +11,7 @@
         #+gt :testbot)
   (:local-nicknames (:file :org.shirakumo.file-attributes))
   #+gt (:shadowing-import-from :testbot :batch-test)
-  (:import-from :serapeum :trim-whitespace :string^=)
+  (:import-from :serapeum :dict :string^= :trim-whitespace)
   (:import-from :gt :equal? :lines)
   (:import-from :fset :seq)
   (:import-from :serapeum :drop-prefix)
@@ -803,6 +803,25 @@
   (is (not (weak-equal? (seq 1) (set 1))))
   (is (not (weak-equal? (set 1) (fset:bag 1))))
   (is (not (weak-equal? (fset:map (:x 1)) (fset:bag :x)))))
+
+(fset:define-tuple-key +K0+)
+
+(deftest tuple-equal?-test ()
+  (is (strong-equal? (fset:empty-tuple) (fset:empty-tuple)))
+  (is (strong-equal? (fset:tuple (+K0+ 0)) (fset:tuple (+K0+ 0))))
+  (is (not (weak-equal? (fset:tuple (+K0+ 0)) (fset:tuple (+K0+ 1)))))
+  ;; Dictionaries aren't equal per FSet, so this tests we're actually
+  ;; descending with equal?.
+  (is (strong-equal? (fset:tuple (+K0+ (dict :x 1)))
+                     (fset:tuple (+K0+ (dict :x 1)))))
+  (is (not (weak-equal? (fset:tuple (+K0+ (dict :x 1)))
+                        (fset:tuple (+K0+ (dict :x 2))))))
+  ;; Cross-type.
+  (is (not (weak-equal? (fset:tuple) (fset:map))))
+  (is (not (weak-equal? (fset:map (+K0+ 0)) (fset:tuple (+K0+ 0)))))
+  (is (not (weak-equal? (fset:tuple) (set))))
+  (is (not (weak-equal? (fset:tuple) (seq))))
+  (is (not (weak-equal? (fset:tuple) (fset:bag)))))
 
 (deftest copy-file-with-attributes-test ()
   (let ((permissions '(:USER-READ :USER-WRITE :USER-EXEC
