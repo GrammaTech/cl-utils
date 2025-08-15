@@ -247,7 +247,7 @@
         (is (zerop errno))))))
 
 #-windows ; IO-SHELL not yet supported on Windows
-(deftest read-and-write-shell-files ()
+(deftest (read-and-write-shell-files :long-running) ()
   (let ((test-string "Hello world. Hello world. Hello world."))
     (is (string= test-string
                  (handler-case
@@ -263,7 +263,7 @@
                    (error (c) (declare (ignorable c)) nil))))))
 
 #-windows
-(deftest read-and-write-bytes-shell-files ()
+(deftest (read-and-write-bytes-shell-files :long-running) ()
   (let ((byte #x25))
     (is (equal byte
                (handler-case
