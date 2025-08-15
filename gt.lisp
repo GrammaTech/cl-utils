@@ -211,9 +211,9 @@ listings (and, if the Lisp supports it, with external utilities like
 
 (defun compare/iterator (col1 col2)
   "Compare two FSet collections, known to be of the same size, using FSet's iterator protocol."
-  (fbind ((iterator (iterator col1)))
-    (iter (while (iterator :more?))
-          (mvlet* ((key1 val1 (iterator :get))
+  (fbind ((it (iterator col1)))
+    (iter (while (it :more?))
+          (mvlet* ((key1 val1 (it :get))
                    (val2 val2? (lookup col2 key1)))
             (always (and val2? (equal? val1 val2)))))))
 
