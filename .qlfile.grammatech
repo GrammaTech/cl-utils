@@ -1,4 +1,6 @@
-git stefil+ https://github.com/GrammaTech/stefil-.git main
+git fset https://github.com/slburson/fset.git
 git functional-trees https://git.grammatech.com/synthesis/functional-trees.git
-git testbot https://git.grammatech.com/synthesis/testbot.git
+git misc-extensions https://github.com/slburson/misc-extensions.git
 git serapeum https://github.com/ruricolist/serapeum
+git stefil+ https://github.com/GrammaTech/stefil-.git main
+git testbot https://git.grammatech.com/synthesis/testbot.git

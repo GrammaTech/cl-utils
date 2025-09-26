@@ -1,3 +1,5 @@
-git stefil+ https://github.com/GrammaTech/stefil-.git main
+git fset https://github.com/slburson/fset.git
 git functional-trees https://github.com/GrammaTech/functional-trees.git
+git misc-extensions https://github.com/slburson/misc-extensions.git
 git serapeum https://github.com/ruricolist/serapeum
+git stefil+ https://github.com/GrammaTech/stefil-.git main
