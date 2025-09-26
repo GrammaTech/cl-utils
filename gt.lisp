@@ -12,27 +12,48 @@
 ;;;; and no official endorsement should be inferred.
 (uiop/package:define-package :gt
     (:nicknames :gt/gt)
-  (:use-reexport :common-lisp :alexandria :serapeum :closer-mop
-                 :trivia :cl-ppcre :trivia.ppcre
-                 :iterate :gt/fset :fset :gmap :split-sequence
-                 :bordeaux-threads
-                 :functional-trees
-                 :named-readtables :curry-compose-reader-macros)
+  (:use-reexport
+    :common-lisp
+    :alexandria
+    :bordeaux-threads
+    :cl-ppcre
+    :closer-mop
+    :curry-compose-reader-macros
+    :fset
+    :fset/iterate
+    :functional-trees
+    :gmap
+    :gt/fset
+    :iterate
+    :named-readtables
+    :serapeum
+    :split-sequence
+    :trivia
+    :trivia.ppcre)
+  (:import-from
+    :fset/iterate
+    :in-iterator
+    :in-map
+    :in-map-iterator
+    :in-seq
+    :in-set)
   (:shadow :mapconcat :~> :~~>)  ; Shadow serapeum arrows & mapconcat.
-  (:shadow :lines)                      ; We wrap in a defgeneric.
-  (:shadow :exe)                        ; This isn't generically useful.
-  (:shadow :equal?)                     ; We'd rather this be generic.
+  (:shadow :lines)               ; We wrap in a defgeneric.
+  (:shadow :exe)                 ; This isn't generically useful.
+  (:shadow :equal?)              ; We'd rather this be generic.
   (:shadowing-import-from :common-lisp
                           :map)         ; Shadow fset:map.
   (:shadowing-import-from :serapeum
                           :tuple)       ; Shadow fset:tuple.
   (:shadowing-import-from :alexandria
                           :compose)     ; Shadow fset:compose.
-  (:shadow :alist)       ; Shadow fset:alist and trivia:alist.
+  (:shadow :alist)               ; Shadow fset:alist and trivia:alist.
   (:shadowing-import-from :trivia :plist)
   (:shadowing-import-from :iterate
                           ;; Shadow serapeum macros.
                           :summing :collecting :sum :in)
+  (:shadowing-import-from :fset/iterate
+                          :unioning)
   (:shadowing-import-from :closer-mop
                           :standard-method
                           :standard-class
@@ -73,7 +94,7 @@
            :parse-numbers
            :equal?
            :withf :lessf
-           :in-seq :index-of-seq
+           :in-seq
            :in-set
            :in-map
            :in-iterator
@@ -273,64 +294,10 @@ listings (and, if the Lisp supports it, with external utilities like
 
 ;;; Iterate drivers for FSet and functional-trees.
 
-(defclause-sequence in-seq index-of-seq
-  :access-fn 'fset:lookup
-  :size-fn 'fset:size
-  :element-type t
-  :element-doc-string "Elements of anything that implements fset:size and fset:lookup."
-  :index-doc-string "Indices of anything that implements fset:size and fset:lookup.")
-
-(defmacro-driver (for node in-iterator it)
-  "Driver for FSet iterators."
-  (let ((for (if generate 'generate 'for)))
-    (with-unique-names (next v present?)
-      `(progn
-         (iterate:with ,next = (ensure-function ,it))
-         (,for ,node next
-               (multiple-value-bind (,v ,present?)
-                   (funcall ,next :get)
-                 (if ,present?
-                     ,v
-                     (terminate))))))))
-
-(defmacro-driver (for node in-map-iterator it)
-  "Driver for FSet map iterators."
-  (let ((for (if generate 'generate 'for)))
-    (with-unique-names (next k v present?)
-      `(progn
-         (iterate:with ,next = (ensure-function ,it))
-         (,for ,node next
-               (multiple-value-bind (,k ,v ,present?)
-                   (funcall ,next :get)
-                 (if ,present?
-                     (list ,k ,v)
-                     (terminate))))))))
-
-(defmacro-driver (for x in-set set)
-  "Driver for FSet sets."
-  (let ((kwd (if generate 'generate 'for)))
-    `(,kwd ,x in-iterator (iterator ,set))))
-
 (defmacro-driver (for node in-tree tree)
   "Driver for functional trees."
   (let ((kwd (if generate 'generate 'for)))
-    `(,kwd ,node in-iterator (iterator ,tree))))
-
-(defmacro-driver (for node in-map map)
-  "Driver for FSet maps. Each key-value pair is returned as
-a two-element list."
-  (let ((kwd (if generate 'generate 'for)))
-    `(,kwd ,node in-map-iterator (iterator ,map))))
-
-(defmacro-driver (for elt in-bag bag)
-  "Driver for FSet bags."
-  (let ((kwd (if generate 'generate 'for)))
-    `(,kwd ,elt in-iterator (iterator ,bag))))
-
-(defmacro-driver (for elt in-bag-pairs bag)
-  "Driver for FSet bags."
-  (let ((kwd (if generate 'generate 'for)))
-    `(,kwd ,elt in-map-iterator (iterator ,bag :pairs? t))))
+    `(,kwd ,node in-iterator ,tree)))
 
 (defmethod iterator ((node node) &key)
   "An FSet iterator for functional trees."
@@ -351,20 +318,14 @@ a two-element list."
                (setf stack (append children stack))
                (values node t))))))))
 
-(defmacro-clause (set-collect x &optional into var)
-    `(reducing ,x by #'fset:with into ,var initial-value (empty-set)))
+(defmacro set-collect (x &rest args)
+  `(collect-set ,x ,@args))
 
-(defmacro-clause (seq-collect x &optional into var)
-    `(reducing ,x by #'fset:with-last into ,var initial-value (empty-seq)))
-
-(defsubst apply-with (map kv)
-  (apply #'fset:with map kv))
-
-(defmacro-clause (%map-collect kv &optional into var)
-    `(reducing ,kv by #'apply-with into ,var initial-value (empty-map)))
+(defmacro seq-collect (x &rest args)
+  `(collect-seq ,x ,@args))
 
 (defmacro map-collect (k v &rest args)
-  `(%map-collect (list ,k ,v) ,@args))
+  `(collect-map (,k ,v) ,@args))
 
 (defpattern alist (&rest args)
   `(trivia:alist ,@args))
