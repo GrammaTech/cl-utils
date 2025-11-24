@@ -230,13 +230,25 @@ listings (and, if the Lisp supports it, with external utilities like
   (:method ((string string) &rest args &key)
     (apply #'serapeum:lines string args)))
 
-(defun compare/iterator (col1 col2)
-  "Compare two FSet collections, known to be of the same size, using FSet's iterator protocol."
-  (fbind ((it (iterator col1)))
-    (iter (while (it :more?))
-          (mvlet* ((key1 val1 (it :get))
-                   (val2 val2? (lookup col2 key1)))
-            (always (and val2? (equal? val1 val2)))))))
+(defun compare/iterator (col1 col2 &key same-order)
+  "Compare two FSet collections, known to be of the same size and type,
+using FSet's iterator protocol."
+  ;; NB FSet now has custom ordering functions.
+  (if same-order
+      ;; If the two maps have the same order, we can iterate them in
+      ;; lockstep to avoid seeking/hashing.
+      (fbind ((it1 (iterator col1))
+              (it2 (iterator col2)))
+        (iter (while (it1 :more?))
+              (mvlet* ((key1 val1 (it1 :get))
+                       (key2 val2 (it2 :get)))
+                (always (and (equal? key1 key2)
+                             (equal? val1 val2))))))
+      (fbind ((it (iterator col1)))
+        (iter (while (it :more?))
+              (mvlet* ((key1 val1 (it :get))
+                       (val2 val2? (lookup col2 key1)))
+                (always (and val2? (equal? val1 val2))))))))
 
 (defgeneric equal? (a b)
   (:documentation "Generic equality designed to descend into structures.")
@@ -255,9 +267,15 @@ listings (and, if the Lisp supports it, with external utilities like
   (:method ((a set) (b set))
     (every #'equal? a b))
   (:method ((a fset:map) (b fset:map))
-    (compare/iterator a b))
+    (compare/iterator
+     a b
+     :same-order
+     (fset:equal? (empty-map-like a) (empty-map-like b))))
   (:method ((a bag) (b bag))
-    (compare/iterator a b))
+    (compare/iterator
+     a b
+     :same-order
+     (fset:equal? (empty-bag-like a) (empty-bag-like b))))
   (:method ((a fset:tuple) (b fset:tuple))
     (and
      (= (size a) (size b))
