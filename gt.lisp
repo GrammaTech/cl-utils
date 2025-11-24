@@ -230,6 +230,12 @@ listings (and, if the Lisp supports it, with external utilities like
   (:method ((string string) &rest args &key)
     (apply #'serapeum:lines string args)))
 
+(define-compiler-macro equal? (a b)
+  (once-only (a b)
+    `(or (eq ,a ,b)
+         (locally (declare (notinline equal?))
+           (equal? ,a ,b)))))
+
 (defun compare/iterator (col1 col2 &key same-order)
   "Compare two FSet collections, known to be of the same size and type,
 using FSet's iterator protocol."
