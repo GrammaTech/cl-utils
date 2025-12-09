@@ -79,6 +79,7 @@
                           :remove :remove-if :remove-if-not
                           :substitute :substitute-if :substitute-if-not
                           :some :every :notany :notevery
+                          :mismatch :search
                           ;; Shadowed sequence operations from serapeum.
                           :concat :range :partition :filter)
   (:shadowing-import-from :gt/fset
