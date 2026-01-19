@@ -692,12 +692,7 @@ PATH may be either pathnames or namestrings of pathnames."
  owner, group and access/modify times. By default all attributes are copied,
  except user, as changing the user usually requires root privilege."
   ;; copy the file bytes
-  (with-open-file (is old :direction :input :element-type 'unsigned-byte)
-    (with-open-file (os new :direction :output :element-type 'unsigned-byte
-                            :if-exists :supersede)
-      (do ((x (read-byte is nil nil)(read-byte is nil nil)))
-          ((null x))
-        (write-byte x os))))
+  (copy-file old new)
   ;; optionally copy file permissions
   (when permissions
     (setf (file-permissions new) (file-permissions old)))
