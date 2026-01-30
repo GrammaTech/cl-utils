@@ -105,7 +105,8 @@
            :seq-collect
            :map-collect
            :alist
-           :with-thread-name))
+           :with-thread-name
+           :matchesp))
 ;;; NOTE: *Consider* including Generic-cl less its new seq. stuff.
 (in-package :gt)
 
@@ -357,3 +358,10 @@ using FSet's iterator protocol."
 
 (defmethod convert ((to-type (eql 'alist)) object &rest args &key)
   (apply #'convert 'fset:alist object args))
+
+(defmacro matchesp (value &body patterns)
+  "Return T if VALUE matches any of the Trivia patterns in PATTERNS."
+  `(the boolean
+        (match ,value
+          ((or ,@patterns) t)
+          (otherwise nil))))
